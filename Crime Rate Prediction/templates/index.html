@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Crime Rate Prediction</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+    <!-- JS -->
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+
+</head>
+
+<body>
+
+<header>
+    <h1 class="title">Crime Rate Prediction</h1>
+    <p class="tagline">Predict future crime trends based on city, crime type, and year</p>
+</header>
+
+<section class="section1">
+
+    <form action="/predict" method="POST">
+
+        <table class="table1">
+            <tr>
+                <td class="label">Select City:</td>
+                <td class="sel">
+                    <select name="city" required>
+                        <option value="0">Ahmedabad</option>
+                        <option value="1">Bengaluru</option>
+                        <option value="2">Chennai</option>
+                        <option value="3">Coimbatore</option>
+                        <option value="4">Delhi</option>
+                        <option value="5">Ghaziabad</option>
+                        <option value="6">Hyderabad</option>
+                        <option value="7">Indore</option>
+                        <option value="8">Jaipur</option>
+                        <option value="9">Kanpur</option>
+                        <option value="10">Kochi</option>
+                        <option value="11">Kolkata</option>
+                        <option value="12">Kozhikode</option>
+                        <option value="13">Lucknow</option>
+                        <option value="14">Mumbai</option>
+                        <option value="15">Nagpur</option>
+                        <option value="16">Patna</option>
+                        <option value="17">Pune</option>
+                        <option value="18">Surat</option>
+                    </select>
+                </td>
+            </tr>
+
+            <tr>
+                <td class="label">Select Crime Type:</td>
+                <td class="sel">
+                    <select name="crime" required>
+                        <option value="0">Crime Committed by Juveniles</option>
+                        <option value="1">Crime against SC</option>
+                        <option value="2">Crime against ST</option>
+                        <option value="3">Crime against Senior Citizen</option>
+                        <option value="4">Crime against children</option>
+                        <option value="5">Crime against women</option>
+                        <option value="6">Cyber Crimes</option>
+                        <option value="7">Economic Offences</option>
+                        <option value="8">Kidnapping</option>
+                        <option value="9">Murder</option>
+                    </select>
+                </td>
+            </tr>
+
+            <tr>
+                <td class="label">Select Year:</td>
+                <td class="sel">
+                    <select id="year-dropdown" name="year" required></select>
+                </td>
+            </tr>
+        </table>
+
+        <div class="button">
+            <button class="btn" type="submit">Predict Crime Rate</button>
+            <a href="/history" class="btn">View Prediction History</a>
+        </div>
+
+    </form>
+
+</section>
+
+</body>
+</html>

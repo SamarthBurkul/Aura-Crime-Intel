@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prediction Result</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        /* ── Alternate model card ─────────────────────────────── */
+        .alt-card {
+            max-width: 520px;
+            margin: 28px auto 0;
+            background: #1a1a2e;
+            border: 1px solid #334;
+            border-radius: 12px;
+            padding: 18px 24px;
+            color: #cdd;
+            font-family: Georgia, serif;
+        }
+        .alt-card h4 {
+            margin: 0 0 12px;
+            font-size: 15px;
+            letter-spacing: 0.5px;
+            color: #aac;
+            text-transform: uppercase;
+        }
+        .alt-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 6px 0;
+            font-size: 15px;
+        }
+        .alt-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #111;
+        }
+        .confidence-bar-bg {
+            background: #333;
+            border-radius: 8px;
+            height: 8px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .confidence-bar-fill {
+            height: 8px;
+            border-radius: 8px;
+        }
+        .disclaimer {
+            font-size: 11px;
+            color: #778;
+            margin-top: 12px;
+            font-style: italic;
+            line-height: 1.5;
+        }
+        .tag-experimental {
+            font-size: 10px;
+            background: #334;
+            color: #aac;
+            padding: 2px 7px;
+            border-radius: 4px;
+            vertical-align: middle;
+            margin-left: 6px;
+        }
+        /* ── N/A card ─────────────────────────────────────────── */
+        .alt-na {
+            max-width: 520px;
+            margin: 20px auto 0;
+            background: #1a1a2e;
+            border: 1px dashed #445;
+            border-radius: 12px;
+            padding: 14px 22px;
+            color: #778;
+            font-size: 13px;
+            font-style: italic;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1 class="title">Prediction Result</h1>
+</header>
+
+<section class="prediction">
+
+    <table class="table2" style="margin-left:auto; margin-right:auto; text-align:center;">
+        <tr class="r1"><td><b>City:</b></td><td>{{ city_name }}</td></tr>
+        <tr class="r1"><td><b>Crime Type:</b></td><td>{{ crime_type }}</td></tr>
+        <tr class="r1"><td><b>Year:</b></td><td>{{ year }}</td></tr>
+    </table>
+
+    <!-- ── PRIMARY model result ──────────────────────────────── -->
+    <table class="table3" style="box-shadow: 0 0 25px {{ status_color }};">
+        <tr class="r2">
+            <td class="result"><b>Status</b></td>
+            <td class="result" style="color: {{ status_color }};"><b>{{ crime_status }}</b></td>
+        </tr>
+        <tr class="r2">
+            <td class="result"><b>Crime Rate</b> <span style="font-size:11px;color:#aaa;">(Primary)</span></td>
+            <td class="result">{{ crime_rate }}</td>
+        </tr>
+        <tr class="r2">
+            <td class="result"><b>Predicted Cases</b></td>
+            <td class="result">{{ cases }}</td>
+        </tr>
+        <tr class="r2">
+            <td class="result"><b>Population Used</b></td>
+            <td class="result">{{ population }}</td>
+        </tr>
+        <tr class="r2">
+            <td class="result"><b>Severity Level</b></td>
+            <td class="result">
+                <div style="width:200px; height:10px; background:#ddd; border-radius:10px;">
+                    <div style="height:10px; width:{{ severity_width }}%; background:{{ status_color }}; border-radius:10px;"></div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- ── ALTERNATE model result (Option 1 + 3A) ──────────── -->
+    {% if alt_crime_rate is not none %}
+    <div class="alt-card">
+        <h4>🔬 Alternate Estimate <span class="tag-experimental">EXPERIMENTAL</span></h4>
+
+        <div class="alt-row">
+            <span>Alternate Crime Rate</span>
+            <span><b>{{ alt_crime_rate }}</b> &nbsp;±&nbsp; {{ alt_uncertainty }}</span>
+        </div>
+
+        <div class="alt-row">
+            <span>Confidence</span>
+            <span class="alt-badge" style="background: {{ alt_confidence_color }};">
+                {{ alt_confidence_label }}
+            </span>
+        </div>
+
+        {% set conf_pct = [(100 - (alt_uncertainty / (alt_crime_rate + 0.001) * 100)), 0] | max %}
+        {% set conf_pct = [conf_pct, 100] | min %}
+        <div class="confidence-bar-bg">
+            <div class="confidence-bar-fill"
+                 style="width: {{ conf_pct | round | int }}%; background: {{ alt_confidence_color }};"></div>
+        </div>
+
+        <p class="disclaimer">
+            Trained on incident-level data (40,160 records) aggregated to city-year crime rates.
+            R² = 93.5% · Used for additional insight only — primary prediction drives the status verdict.
+        </p>
+    </div>
+    {% else %}
+    <div class="alt-na">
+        ℹ️ Alternate estimate not available for <b>{{ city_name }}</b>
+        (city not present in incident-level training data).
+    </div>
+    {% endif %}
+
+</section>
+
+<div style="text-align:center; margin-top:35px;">
+    <h3 style="font-style:italic;">Crime Trend (Next 5 Years)</h3>
+    <img src="data:image/png;base64,{{ graph_url }}"
+         style="width:420px; border:2px solid #002244; border-radius:10px;">
+</div>
+
+<div class="button2">
+    <a href="/"><button class="btn">Back to Home</button></a>
+</div>
+
+</body>
+</html>

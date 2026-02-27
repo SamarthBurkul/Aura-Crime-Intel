@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.env
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data files (large / sensitive)
+new_data/
+check_data.py
+check_data2.py
+retrain_eval.py
+save_model_v2.py
+sanity_checks.py
+data_report.txt
+new_model_results.txt
+
+# SQLite database (regenerates on run)
+*.db
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
