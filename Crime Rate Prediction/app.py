@@ -9,10 +9,10 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 # ══════════════════════════════════════════════════════════════
-# LOAD MODELS
+# LOAD MODELS + DATA
 # ══════════════════════════════════════════════════════════════
 
-# V3 combined pipeline (production — 400 trees, R²=0.92)
+# V3 combined pipeline (PRIMARY — 400 trees, R²=0.92)
 v3_pipe = joblib.load('Model/model_combined_v3.pkl')
 with open('Model/model_combined_v3_meta.json') as f:
     v3_meta = json.load(f)
@@ -22,7 +22,24 @@ V3_RELIABLE  = set(v3_meta['reliable_cities'])
 V3_P50       = v3_meta['uncertainty_percentiles']['p50']
 V3_P95       = v3_meta['uncertainty_percentiles']['p95']
 
-# Old model (fallback for cities not in v3)
+# Load REAL crime counts from training data (most recent year per city)
+_df = pd.read_csv('Model/df_merged.csv')
+_df = _df.sort_values('Year').groupby('City').last().reset_index()
+CITY_BASELINE = {}
+for _, row in _df.iterrows():
+    CITY_BASELINE[row['City']] = {
+        'Assault':     row['Assault'],
+        'Burglary':    row['Burglary'],
+        'Homicide':    row['Homicide'],
+        'Other Crimes':row['Other Crimes'],
+        'Robbery':     row['Robbery'],
+        'Theft':       row['Theft'],
+        'Population':  row['Population'],
+        'base_year':   int(row['Year']),
+    }
+print(f"[INIT] Loaded crime baselines for {len(CITY_BASELINE)} cities: {list(CITY_BASELINE.keys())}")
+
+# Old V1 model (ALTERNATE — per-crime-type predictions)
 old_model = pickle.load(open('Model/archive/model_v1.pkl', 'rb'))
 
 app = Flask(__name__)
@@ -58,16 +75,6 @@ UI_TO_V3 = {
     'Kochi': None,       # not in v3
     'Hyderabad': None,   # not in v3 city_mappings
 }
-# Absolute population per v3 training data
-POP_ABS = {
-    'Ahmedabad':6350000,'Bangalore':4580000,'Chennai':8700000,'Delhi':16310000,
-    'Ghaziabad':2360000,'Indore':2170000,'Jaipur':3070000,'Kanpur':2920000,
-    'Kolkata':14110000,'Lucknow':2900000,'Mumbai':18410000,'Nagpur':2500000,
-    'Patna':2050000,'Pune':5050000,'Surat':4580000,
-    'Agra':4580000,'Bhopal':4580000,'Faridabad':4580000,'Kalyan':4580000,
-    'Ludhiana':4580000,'Nashik':4580000,'Srinagar':4580000,'Thane':4580000,
-    'Varanasi':4580000,'Vasai':4580000,'Visakhapatnam':4580000,
-}
 
 # ══════════════════════════════════════════════════════════════
 # DB
@@ -87,16 +94,29 @@ def init_db():
     conn.commit(); conn.close()
 
 # ══════════════════════════════════════════════════════════════
-# V3 PREDICT
+# V3 PREDICT — uses REAL crime counts from training data
 # ══════════════════════════════════════════════════════════════
 def v3_predict(city_name, year):
-    """Predict with v3 pipeline. Returns dict or None if city not supported."""
+    """Predict total crime rate using v3 pipeline with real baseline crime counts."""
     v3_city = UI_TO_V3.get(city_name, city_name)
     if v3_city is None or v3_city not in V3_CITIES:
         return None
-    pop = POP_ABS.get(v3_city, 4580000)
-    row = {'Year': year, 'Population': pop, 'City': v3_city,
-           'Assault':0,'Burglary':0,'Homicide':0,'Other Crimes':0,'Robbery':0,'Theft':0}
+    baseline = CITY_BASELINE.get(v3_city)
+    if baseline is None:
+        return None
+
+    pop = baseline['Population']
+    row = {
+        'Year':         year,
+        'Population':   pop,
+        'City':         v3_city,
+        'Assault':      baseline['Assault'],
+        'Burglary':     baseline['Burglary'],
+        'Homicide':     baseline['Homicide'],
+        'Other Crimes': baseline['Other Crimes'],
+        'Robbery':      baseline['Robbery'],
+        'Theft':        baseline['Theft'],
+    }
     df = pd.DataFrame([row])
     rate = float(v3_pipe.predict(df)[0])
 
@@ -116,6 +136,7 @@ def v3_predict(city_name, year):
     return {'rate': rate, 'std': std, 'confidence': conf, 'reliable': reliable}
 
 def old_predict(city_code, crime_code, year, pop):
+    """V1 model: per-crime-type prediction."""
     return round(float(old_model.predict([[year, int(city_code), pop, int(crime_code)]])[0]), 2)
 
 # ══════════════════════════════════════════════════════════════
@@ -143,21 +164,25 @@ def predict():
     pop_lakh   = POPULATION_LAKH[city_code]
     pop_lakh   = round(pop_lakh + 0.01 * (year - 2011) * pop_lakh, 3)
 
-    # ── V1 is always PRIMARY (trained on city+crime+year — exact match to our form)
-    crime_rate = old_predict(city_code, crime_code, year, pop_lakh)
-    model_used = 'v1_primary'
-
-    # ── V3 as ALTERNATE (shows uncertainty across 400 trees)
+    # ── Try V3 as PRIMARY (total crime rate, real baseline data) ──
     v3 = v3_predict(city_name, year)
     alt_mean = alt_std = None
     confidence = None
     reliable = False
 
     if v3:
-        alt_mean   = v3['rate']
-        alt_std    = v3['std']
+        # V3 is primary (total crime rate per 100K)
+        crime_rate = v3['rate']
+        model_used = 'v3_combined'
         confidence = v3['confidence']
         reliable   = v3['reliable']
+        # V1 as alternate (per-crime-type breakdown)
+        alt_mean = old_predict(city_code, crime_code, year, pop_lakh)
+        alt_std  = v3['std']
+    else:
+        # Fallback to V1 for cities not in v3
+        crime_rate = old_predict(city_code, crime_code, year, pop_lakh)
+        model_used = 'v1_fallback'
 
     cases = math.ceil(crime_rate * pop_lakh)
 
@@ -167,12 +192,16 @@ def predict():
     else:                  status, color = 'Very High', '#e74c3c'
     severity = min(round((crime_rate / 15) * 100, 1), 100)
 
-    # ── Trend 5yr (V1 model) ──
+    # ── Trend 5yr ──
     trend = []
     for i in range(1, 6):
         fy = year + i
-        fp = pop_lakh * (1 + 0.01 * i)
-        fr = old_predict(city_code, crime_code, fy, fp)
+        if v3:
+            r = v3_predict(city_name, fy)
+            fr = r['rate'] if r else crime_rate
+        else:
+            fp = pop_lakh * (1 + 0.01 * i)
+            fr = old_predict(city_code, crime_code, fy, fp)
         trend.append({'year': fy, 'rate': round(fr, 2)})
 
     # ── Chart ──
@@ -262,7 +291,7 @@ def stats():
         'highestCity': highest[0] if highest else '—',
         'safestCity':  safest[0]  if safest  else '—',
         'modelsActive': 2,
-        'productionModel': 'v3_combined (R²=0.92, 400 trees)',
+        'productionModel': 'V3 Combined (R²=0.92, 400 trees)',
     })
 
 if __name__ == '__main__':

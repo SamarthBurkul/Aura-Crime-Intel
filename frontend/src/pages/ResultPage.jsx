@@ -59,7 +59,7 @@ export default function ResultPage({ result }) {
             {/* ── HEADER ── */}
             <div className="result-header">
                 <div className="result-title">{city} · {crimeType}</div>
-                <div className="result-meta">Predicted for year {year}{reliable ? ' · ✅ Reliable City' : ''}</div>
+                <div className="result-meta">Predicted for year {year}{reliable ? ' · ✅ Reliable City' : ''} · {modelUsed === 'v3_combined' ? 'V3 Combined (400 trees)' : 'V1 Fallback'}</div>
             </div>
 
             {/* ── PRIMARY + ALTERNATE SIDE BY SIDE ── */}
@@ -67,11 +67,11 @@ export default function ResultPage({ result }) {
 
                 {/* PRIMARY */}
                 <div className="primary-card">
-                    <div className="primary-label">Primary Model · R² 93.2%</div>
+                    <div className="primary-label">{modelUsed === 'v3_combined' ? 'V3 Combined · R² 92.15% · 400 Trees' : 'V1 Original · R² 93.2%'}</div>
                     <div className="crime-rate-big" style={{ color: sColor }}>
                         {primary.crimeRate}
                     </div>
-                    <div style={{ color: 'var(--muted)', fontSize: 13 }}>crimes per lakh population</div>
+                    <div style={{ color: 'var(--muted)', fontSize: 13 }}>{modelUsed === 'v3_combined' ? 'total crimes per lakh population' : 'crimes per lakh population'}</div>
                     <div className="status-badge" style={{ background: `${sColor}20`, color: sColor, border: `1px solid ${sColor}40` }}>
                         <StatusDot status={primary.status} />
                         {primary.status} Crime Area
@@ -96,8 +96,8 @@ export default function ResultPage({ result }) {
                 {alternate ? (
                     <div className="alt-card">
                         <div className="alt-header">
-                            <span className="alt-title">V3 Combined Model · 400 Trees</span>
-                            <span className="exp-tag">EXPERIMENTAL</span>
+                            <span className="alt-title">{modelUsed === 'v3_combined' ? `V1 · ${crimeType} Specific` : 'V3 Combined · 400 Trees'}</span>
+                            <span className="exp-tag">{modelUsed === 'v3_combined' ? 'PER-CRIME' : 'EXPERIMENTAL'}</span>
                         </div>
                         <div>
                             <span className="alt-rate">{alternate.mean}</span>
@@ -108,12 +108,14 @@ export default function ResultPage({ result }) {
                             <ConfBadge confidence={alternate.confidence} />
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--muted)', background: 'rgba(255,255,255,0.03)', padding: '8px 10px', borderRadius: 8 }}>
-                            <strong>How to read:</strong> Crime rate from V3 combined model (trained on NCRB + incident data).
-                            Std computed across 400 decision trees — lower std = more confident.
+                            <strong>How to read:</strong> {modelUsed === 'v3_combined'
+                                ? `V1 prediction for "${crimeType}" specifically. Std from V3's 400 trees.`
+                                : 'V3 total crime rate. Std across 400 trees — lower = more confident.'}
                         </div>
                         <p className="alt-disclaimer">
-                            V3 trained on combined NCRB + 40K incident records (GroupKFold CV, R²=92.15%).
-                            Used for additional insight — primary model drives the verdict.
+                            {modelUsed === 'v3_combined'
+                                ? `V3 predicts total crime rate. This card shows V1's prediction for "${crimeType}" specifically.`
+                                : 'V3 trained on combined NCRB + incident data (GroupKFold CV, R²=92.15%).'}
                         </p>
                     </div>
                 ) : (
