@@ -293,19 +293,19 @@ export default function Prediction() {
                       </select>
                     </div>
 
-                    {/* Year Input */}
+                    {/* Year Dropdown */}
                     <div>
                       <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Target Year</label>
-                      <input
-                        type="number"
-                        min="2024"
-                        max="2035"
-                        placeholder="2026"
+                      <select
                         value={selectedYear}
                         onChange={(e) => setSelectedYear(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-xl px-4 py-3 appearance-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                         required
-                      />
+                      >
+                        {Array.from({ length: 2035 - 2014 + 1 }, (_, i) => 2014 + i).map(y => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
                     </div>
 
                     <button
