@@ -59,7 +59,7 @@ export default function ResultPage({ result }) {
             {/* ── HEADER ── */}
             <div className="result-header">
                 <div className="result-title">{city} · {crimeType}</div>
-                <div className="result-meta">Predicted for year {year} · Model: {modelUsed === 'v3_combined' ? 'V3 Combined (400 trees)' : 'V1 Fallback'}{reliable ? ' · ✅ Reliable City' : ''}</div>
+                <div className="result-meta">Predicted for year {year}{reliable ? ' · ✅ Reliable City' : ''}</div>
             </div>
 
             {/* ── PRIMARY + ALTERNATE SIDE BY SIDE ── */}
@@ -67,7 +67,7 @@ export default function ResultPage({ result }) {
 
                 {/* PRIMARY */}
                 <div className="primary-card">
-                    <div className="primary-label">{modelUsed === 'v3_combined' ? 'V3 Combined · R² 92.15%' : 'V1 Original · R² 93.2%'}</div>
+                    <div className="primary-label">Primary Model · R² 93.2%</div>
                     <div className="crime-rate-big" style={{ color: sColor }}>
                         {primary.crimeRate}
                     </div>
@@ -96,8 +96,8 @@ export default function ResultPage({ result }) {
                 {alternate ? (
                     <div className="alt-card">
                         <div className="alt-header">
-                            <span className="alt-title">{modelUsed === 'v3_combined' ? 'V1 Original (Cross-check)' : 'Uncertainty Analysis'}</span>
-                            <span className="exp-tag">{modelUsed === 'v3_combined' ? 'COMPARISON' : 'EXPERIMENTAL'}</span>
+                            <span className="alt-title">V3 Combined Model · 400 Trees</span>
+                            <span className="exp-tag">EXPERIMENTAL</span>
                         </div>
                         <div>
                             <span className="alt-rate">{alternate.mean}</span>
@@ -108,14 +108,12 @@ export default function ResultPage({ result }) {
                             <ConfBadge confidence={alternate.confidence} />
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--muted)', background: 'rgba(255,255,255,0.03)', padding: '8px 10px', borderRadius: 8 }}>
-                            <strong>How to read:</strong> {modelUsed === 'v3_combined'
-                                ? 'V1 original model prediction for comparison. Std computed across 400 decision trees of V3.'
-                                : 'Mean ± Std across decision trees. Lower std = more consistent.'}
+                            <strong>How to read:</strong> Crime rate from V3 combined model (trained on NCRB + incident data).
+                            Std computed across 400 decision trees — lower std = more confident.
                         </div>
                         <p className="alt-disclaimer">
-                            {modelUsed === 'v3_combined'
-                                ? 'V3 trained on combined NCRB + incident data (GroupKFold CV, 400 trees). V1 shown as cross-reference.'
-                                : 'Trained on 40,160 incident-level records. Used for insight only — primary model drives the verdict.'}
+                            V3 trained on combined NCRB + 40K incident records (GroupKFold CV, R²=92.15%).
+                            Used for additional insight — primary model drives the verdict.
                         </p>
                     </div>
                 ) : (

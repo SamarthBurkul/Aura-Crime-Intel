@@ -143,27 +143,21 @@ def predict():
     pop_lakh   = POPULATION_LAKH[city_code]
     pop_lakh   = round(pop_lakh + 0.01 * (year - 2011) * pop_lakh, 3)
 
-    # ── Try V3 (promoted model) ────────────────────────────────
+    # ── V1 is always PRIMARY (trained on city+crime+year — exact match to our form)
+    crime_rate = old_predict(city_code, crime_code, year, pop_lakh)
+    model_used = 'v1_primary'
+
+    # ── V3 as ALTERNATE (shows uncertainty across 400 trees)
     v3 = v3_predict(city_name, year)
     alt_mean = alt_std = None
+    confidence = None
     reliable = False
 
     if v3:
-        # V3 is primary
-        crime_rate = v3['rate']
-        model_used = 'v3_combined'
+        alt_mean   = v3['rate']
+        alt_std    = v3['std']
         confidence = v3['confidence']
         reliable   = v3['reliable']
-        # Also compute old model as alternate for comparison
-        alt_rate_old = old_predict(city_code, crime_code, year, pop_lakh)
-        alt_mean = alt_rate_old
-        alt_std  = v3['std']
-    else:
-        # Fallback to old model — v3 not available for this city
-        crime_rate = old_predict(city_code, crime_code, year, pop_lakh)
-        model_used = 'v1_fallback'
-        confidence = None
-        alt_mean = alt_std = None
 
     cases = math.ceil(crime_rate * pop_lakh)
 
@@ -173,16 +167,12 @@ def predict():
     else:                  status, color = 'Very High', '#e74c3c'
     severity = min(round((crime_rate / 15) * 100, 1), 100)
 
-    # ── Trend 5yr ──
+    # ── Trend 5yr (V1 model) ──
     trend = []
     for i in range(1, 6):
         fy = year + i
-        if v3:
-            r = v3_predict(city_name, fy)
-            fr = r['rate'] if r else crime_rate
-        else:
-            fp = pop_lakh * (1 + 0.01 * i)
-            fr = old_predict(city_code, crime_code, fy, fp)
+        fp = pop_lakh * (1 + 0.01 * i)
+        fr = old_predict(city_code, crime_code, fy, fp)
         trend.append({'year': fy, 'rate': round(fr, 2)})
 
     # ── Chart ──
