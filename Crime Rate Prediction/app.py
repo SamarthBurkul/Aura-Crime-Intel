@@ -601,6 +601,53 @@ def heatmap():
     return jsonify(results)
 
 
+@app.route('/api/city-analysis')
+def city_analysis():
+    """Return historical actual crime rate for a given city and year."""
+    city_code = request.args.get('city')
+    year_raw = request.args.get('year')
+    
+    if not city_code or not year_raw:
+        return jsonify({'error': 'Missing city or year'}), 400
+        
+    try:
+        year = int(year_raw)
+    except ValueError:
+        return jsonify({'error': 'Invalid year'}), 400
+        
+    city_name = CITY_NAMES.get(str(city_code))
+    if not city_name:
+        return jsonify({'error': 'Invalid city code'}), 404
+
+    v3_city = UI_TO_V3.get(city_name, city_name)
+    
+    try:
+        # validate_and_prepare will look up the explicit data for that year if it exists in the dataset.
+        df_row, _ = validate_and_prepare({'city': v3_city, 'year': year}, _meta)
+        
+        # Look for the true historical 'crime_rate' in df_row
+        if 'crime_rate' in df_row.columns:
+            rate = df_row['crime_rate'].iloc[0]
+            severity = "Historical"
+        else:
+            # Fallback to mean prediction if no raw crime_rate
+            mean, _, _, _ = predict_with_uncertainty(df_row.iloc[0].to_dict())
+            rate = mean
+            severity = "Estimated"
+            
+        rate = round(float(rate), 2)
+        
+        return jsonify({
+            'city': city_name,
+            'year': year,
+            'rate': rate,
+            'severity': severity,
+            'severityScore': min(round((rate / 15) * 100, 1), 100)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=False)
