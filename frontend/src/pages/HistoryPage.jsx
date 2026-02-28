@@ -1,12 +1,25 @@
+/**
+ * HistoryPage.jsx
+ * ---------------
+ * V3 lock-in: shows model label from modelUsed field returned by /api/history.
+ * Old v2 rows display their model label; they are NOT available in the
+ * prediction dropdown (that is V3-only).
+ *
+ * Task 3: "Unknown" crime type shows amber tooltip explaining the origin.
+ */
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { ArrowLeft, RefreshCw, HelpCircle } from 'lucide-react'
 
 function ConfChip({ confidence }) {
     const map = { High: '#2ecc71', Moderate: '#f39c12', Low: '#e74c3c' }
     if (!confidence) return <span style={{ color: 'var(--muted)' }}>—</span>
-    return <span className="conf-chip" style={{ background: map[confidence] || '#888' }}>{confidence}</span>
+    return (
+        <span className="conf-chip" style={{ background: map[confidence] || '#888' }}>
+            {confidence}
+        </span>
+    )
 }
 
 export default function HistoryPage() {
@@ -68,33 +81,49 @@ export default function HistoryPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {rows.map(r => (
-                                <tr key={r.id}>
-                                    <td style={{ color: 'var(--muted)' }}>{r.id}</td>
-                                    <td style={{ fontWeight: 500 }}>{r.city}</td>
-                                    <td>{r.year}</td>
-                                    <td style={{ color: 'var(--muted)', fontSize: 13 }}>{r.crimeType || '—'}</td>
-                                    <td style={{ fontSize: 11 }}>
-                                        <span style={{
-                                            padding: '2px 6px', borderRadius: 4, fontSize: 10, fontWeight: 600,
-                                            background: 'rgba(108,99,255,0.15)', color: '#6c63ff'
-                                        }}>
-                                            V3 {r.reliable && '✅'}
-                                        </span>
-                                    </td>
-                                    <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{r.crimeRate}</td>
-                                    <td style={{ color: 'var(--muted)' }}>{r.std != null ? `±${r.std}` : '—'}</td>
-                                    <td><ConfChip confidence={r.confidence} /></td>
-                                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>
-                                        {r.createdAt ? r.createdAt.split('.')[0] : '—'}
-                                    </td>
-                                </tr>
-                            ))}
+                            {rows.map(r => {
+                                // Determine model label — show archived v2/v1 rows differently
+                                const isV3 = !r.modelUsed || r.modelUsed.includes('v3') || r.modelUsed.includes('combined')
+                                const modelLabel = isV3 ? 'V3' : (r.modelUsed || 'Archive')
+
+                                return (
+                                    <tr key={r.id}>
+                                        <td style={{ color: 'var(--muted)' }}>{r.id}</td>
+                                        <td style={{ fontWeight: 500 }}>{r.city}</td>
+                                        <td>{r.year}</td>
+                                        <td style={{ color: 'var(--muted)', fontSize: 13 }}>
+                                            {/* Task 3: Unknown tooltip */}
+                                            {r.crimeType === 'Unknown' && r.missingTypeFlag ? (
+                                                <span
+                                                    title="Crime type was not provided when this prediction was made. V3 predicts total crime rate regardless of type."
+                                                    style={{ color: '#aa6600', borderBottom: '1px dashed #aa6600', cursor: 'help' }}
+                                                >
+                                                    Unknown <HelpCircle size={11} style={{ display: 'inline', verticalAlign: 'middle' }} />
+                                                </span>
+                                            ) : (r.crimeType || '—')}
+                                        </td>
+                                        <td style={{ fontSize: 11 }}>
+                                            <span style={{
+                                                padding: '2px 6px', borderRadius: 4, fontSize: 10, fontWeight: 600,
+                                                background: isV3 ? 'rgba(108,99,255,0.15)' : 'rgba(100,100,100,0.15)',
+                                                color: isV3 ? '#6c63ff' : '#aaa'
+                                            }}>
+                                                {modelLabel} {r.reliable && isV3 && '✅'}
+                                            </span>
+                                        </td>
+                                        <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{r.crimeRate}</td>
+                                        <td style={{ color: 'var(--muted)' }}>{r.std != null ? `±${r.std}` : '—'}</td>
+                                        <td><ConfChip confidence={r.confidence} /></td>
+                                        <td style={{ color: 'var(--muted)', fontSize: 12 }}>
+                                            {r.createdAt ? r.createdAt.split('.')[0] : '—'}
+                                        </td>
+                                    </tr>
+                                )
+                            })}
                         </tbody>
                     </table>
                 </div>
             )}
-
             <div style={{ height: 40 }} />
         </div>
     )
