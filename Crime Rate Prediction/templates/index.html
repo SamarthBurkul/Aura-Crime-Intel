@@ -1,90 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Crime Rate Prediction</title>
-
-    <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        /* Task 1: visually grey out the disabled crime-type dropdown */
+        select:disabled,
+        select[disabled] {
+            opacity: 0.45;
+            cursor: not-allowed;
+            background-color: #1a1a2e;
+            color: #778;
+        }
 
-    <!-- JS -->
-    <script src="{{ url_for('static', filename='main.js') }}"></script>
+        .crime-type-wrapper {
+            position: relative;
+            display: inline-block;
+        }
 
+        /* Tooltip shown on hover of the disabled field */
+        .field-tooltip {
+            display: none;
+            position: absolute;
+            bottom: 110%;
+            left: 0;
+            background: #16213e;
+            border: 1px solid #446;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 12px;
+            color: #aac;
+            white-space: nowrap;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .crime-type-wrapper:hover .field-tooltip {
+            display: block;
+        }
+    </style>
 </head>
 
 <body>
 
-<header>
-    <h1 class="title">Crime Rate Prediction</h1>
-    <p class="tagline">Predict future crime trends based on city, crime type, and year</p>
-</header>
+    <header>
+        <h1 class="title">Crime Rate Prediction</h1>
+        <p class="tagline">Predict future crime trends based on city and year</p>
+    </header>
 
-<section class="section1">
+    <section class="section1">
+        <form action="/predict" method="POST">
+            <table class="table1">
+                <tr>
+                    <td class="label">Select City:</td>
+                    <td class="sel">
+                        <select name="city" required>
+                            <option value="0">Ahmedabad</option>
+                            <option value="1">Bengaluru</option>
+                            <option value="2">Chennai</option>
+                            <option value="4">Delhi</option>
+                            <option value="5">Ghaziabad</option>
+                            <option value="7">Indore</option>
+                            <option value="8">Jaipur</option>
+                            <option value="9">Kanpur</option>
+                            <option value="11">Kolkata</option>
+                            <option value="13">Lucknow</option>
+                            <option value="14">Mumbai</option>
+                            <option value="15">Nagpur</option>
+                            <option value="16">Patna</option>
+                            <option value="17">Pune</option>
+                            <option value="18">Surat</option>
+                        </select>
+                    </td>
+                </tr>
 
-    <form action="/predict" method="POST">
+                <!--
+                Task 1: Crime Type dropdown is greyed out (disabled).
+                Hidden input ensures "crime" key is still submitted.
+                Tooltip explains V3 predicts total crime rate, not per-type.
+            -->
+                <tr>
+                    <td class="label">Crime Type:</td>
+                    <td class="sel">
+                        <div class="crime-type-wrapper">
+                            <select name="crime_display" disabled>
+                                <option value="">All Categories (V3 model default)</option>
+                            </select>
+                            <!-- Hidden input so the form always submits a 'crime' value -->
+                            <input type="hidden" name="crime" value="">
+                            <div class="field-tooltip">
+                                V3 predicts total crime rate (all categories).<br>
+                                Crime-type is not used for prediction.
+                            </div>
+                        </div>
+                    </td>
+                </tr>
 
-        <table class="table1">
-            <tr>
-                <td class="label">Select City:</td>
-                <td class="sel">
-                    <select name="city" required>
-                        <option value="0">Ahmedabad</option>
-                        <option value="1">Bengaluru</option>
-                        <option value="2">Chennai</option>
-                        <option value="3">Coimbatore</option>
-                        <option value="4">Delhi</option>
-                        <option value="5">Ghaziabad</option>
-                        <option value="6">Hyderabad</option>
-                        <option value="7">Indore</option>
-                        <option value="8">Jaipur</option>
-                        <option value="9">Kanpur</option>
-                        <option value="10">Kochi</option>
-                        <option value="11">Kolkata</option>
-                        <option value="12">Kozhikode</option>
-                        <option value="13">Lucknow</option>
-                        <option value="14">Mumbai</option>
-                        <option value="15">Nagpur</option>
-                        <option value="16">Patna</option>
-                        <option value="17">Pune</option>
-                        <option value="18">Surat</option>
-                    </select>
-                </td>
-            </tr>
+                <tr>
+                    <td class="label">Select Year:</td>
+                    <td class="sel">
+                        <select id="year-dropdown" name="year" required></select>
+                    </td>
+                </tr>
+            </table>
 
-            <tr>
-                <td class="label">Select Crime Type:</td>
-                <td class="sel">
-                    <select name="crime" required>
-                        <option value="0">Crime Committed by Juveniles</option>
-                        <option value="1">Crime against SC</option>
-                        <option value="2">Crime against ST</option>
-                        <option value="3">Crime against Senior Citizen</option>
-                        <option value="4">Crime against children</option>
-                        <option value="5">Crime against women</option>
-                        <option value="6">Cyber Crimes</option>
-                        <option value="7">Economic Offences</option>
-                        <option value="8">Kidnapping</option>
-                        <option value="9">Murder</option>
-                    </select>
-                </td>
-            </tr>
+            <div class="button">
+                <button class="btn" type="submit">Predict Crime Rate</button>
+                <a href="/history" class="btn">View Prediction History</a>
+            </div>
+        </form>
+    </section>
 
-            <tr>
-                <td class="label">Select Year:</td>
-                <td class="sel">
-                    <select id="year-dropdown" name="year" required></select>
-                </td>
-            </tr>
-        </table>
-
-        <div class="button">
-            <button class="btn" type="submit">Predict Crime Rate</button>
-            <a href="/history" class="btn">View Prediction History</a>
-        </div>
-
-    </form>
-
-</section>
-
+    <script>
+        // Populate year dropdown 2014–2035, default to current year
+        (function () {
+            const sel = document.getElementById('year-dropdown');
+            const currentYear = new Date().getFullYear();
+            for (let y = 2014; y <= 2035; y++) {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y;
+                if (y === currentYear) opt.selected = true;
+                sel.appendChild(opt);
+            }
+        })();
+    </script>
 </body>
+
 </html>
