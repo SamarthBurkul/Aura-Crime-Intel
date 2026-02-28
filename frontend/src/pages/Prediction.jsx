@@ -26,21 +26,29 @@ function PolicyIcon({ rate }) {
 }
 
 const FALLBACK_CITIES = [
-  { value: '0', label: 'Ahmedabad' },
-  { value: '1', label: 'Bengaluru' },
-  { value: '2', label: 'Chennai' },
-  { value: '4', label: 'Delhi' },
-  { value: '5', label: 'Ghaziabad' },
-  { value: '7', label: 'Indore' },
+  { value: '0', label: 'Agra' },
+  { value: '1', label: 'Ahmedabad' },
+  { value: '2', label: 'Bengaluru' },
+  { value: '3', label: 'Bhopal' },
+  { value: '4', label: 'Chennai' },
+  { value: '5', label: 'Delhi' },
+  { value: '6', label: 'Faridabad' },
+  { value: '7', label: 'Ghaziabad' },
   { value: '8', label: 'Jaipur' },
-  { value: '9', label: 'Kanpur' },
-  { value: '11', label: 'Kolkata' },
-  { value: '13', label: 'Lucknow' },
-  { value: '14', label: 'Mumbai' },
-  { value: '15', label: 'Nagpur' },
+  { value: '9', label: 'Kalyan' },
+  { value: '10', label: 'Kolkata' },
+  { value: '11', label: 'Lucknow' },
+  { value: '12', label: 'Ludhiana' },
+  { value: '13', label: 'Mumbai' },
+  { value: '14', label: 'Nagpur' },
+  { value: '15', label: 'Nashik' },
   { value: '16', label: 'Patna' },
   { value: '17', label: 'Pune' },
-  { value: '18', label: 'Surat' }
+  { value: '18', label: 'Srinagar' },
+  { value: '19', label: 'Surat' },
+  { value: '20', label: 'Thane' },
+  { value: '21', label: 'Varanasi' },
+  { value: '22', label: 'Visakhapatnam' }
 ];
 
 const FALLBACK_CRIMES = [

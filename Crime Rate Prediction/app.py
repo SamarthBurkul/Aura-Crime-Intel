@@ -47,13 +47,16 @@ print(f"[INIT] Model loaded — {len(V3_CITIES)} V3 cities, {len(V3_RELIABLE)} r
 app = Flask(__name__)
 CORS(app)
 
-# ── Static data ────────────────────────────────────────────────────────────────
+# ── Static data ── All 23 V3 cities ───────────────────────────────────────────
 CITY_NAMES = {
-    '0':'Ahmedabad','1':'Bengaluru','2':'Chennai',
-    '4':'Delhi','5':'Ghaziabad',
-    '7':'Indore','8':'Jaipur','9':'Kanpur','11':'Kolkata',
-    '13':'Lucknow','14':'Mumbai','15':'Nagpur',
-    '16':'Patna','17':'Pune','18':'Surat'
+    '0':'Agra',       '1':'Ahmedabad',  '2':'Bengaluru',
+    '3':'Bhopal',     '4':'Chennai',    '5':'Delhi',
+    '6':'Faridabad',  '7':'Ghaziabad',  '8':'Jaipur',
+    '9':'Kalyan',     '10':'Kolkata',   '11':'Lucknow',
+    '12':'Ludhiana',  '13':'Mumbai',    '14':'Nagpur',
+    '15':'Nashik',    '16':'Patna',     '17':'Pune',
+    '18':'Srinagar',  '19':'Surat',     '20':'Thane',
+    '21':'Varanasi',  '22':'Visakhapatnam'
 }
 CRIME_NAMES = {
     '0':'Crime Committed by Juveniles','1':'Crime against SC',
@@ -62,11 +65,14 @@ CRIME_NAMES = {
     '6':'Cyber Crimes','7':'Economic Offences','8':'Kidnapping','9':'Murder'
 }
 POPULATION_LAKH = {
-    '0':63.5,'1':85.0,'2':87.0,
-    '4':163.1,'5':23.6,
-    '7':21.7,'8':30.7,'9':29.2,'11':141.1,
-    '13':29.0,'14':184.1,'15':25.0,
-    '16':20.5,'17':50.5,'18':45.8
+    '0':18.4,  '1':63.5,  '2':85.0,
+    '3':18.8,  '4':87.0,  '5':163.1,
+    '6':15.1,  '7':23.6,  '8':30.7,
+    '9':12.5,  '10':141.1,'11':29.0,
+    '12':16.1, '13':184.1,'14':25.0,
+    '15':15.0, '16':20.5, '17':50.5,
+    '18':12.6, '19':45.8, '20':18.0,
+    '21':14.3, '22':17.3
 }
 
 # Task 1: tooltip text surfaced to /api/meta
