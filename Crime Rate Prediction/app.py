@@ -1,42 +1,37 @@
+"""
+app.py
+------
+Flask REST API for Crime Rate Prediction.
+Uses model_loader, predict_utils, and log_predict for clean separation of concerns.
+"""
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json, math, io, base64, sqlite3
 import numpy as np
-import pandas as pd
-import joblib
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-# ══════════════════════════════════════════════════════════════
-# LOAD V3 MODEL + DATA
-# ══════════════════════════════════════════════════════════════
-v3_pipe = joblib.load('Model/model_combined_v3.pkl')
-with open('Model/model_combined_v3_meta.json') as f:
-    v3_meta = json.load(f)
+from model_loader  import load_model, predict_with_uncertainty
+from predict_utils import validate_and_prepare
+from log_predict   import init_db, log_prediction
 
-V3_CITIES    = [c.replace('City_', '') for c in v3_meta['city_mappings']]
-V3_RELIABLE  = set(v3_meta['reliable_cities'])
-V3_P50       = v3_meta['uncertainty_percentiles']['p50']
-V3_P95       = v3_meta['uncertainty_percentiles']['p95']
-
-# Load real crime baselines from training data (most recent year per city)
-_df = pd.read_csv('Model/df_merged.csv')
-_df = _df.sort_values('Year').groupby('City').last().reset_index()
-CITY_BASELINE = {row['City']: row.to_dict() for _, row in _df.iterrows()}
-print(f"[INIT] V3 baselines loaded for: {sorted(CITY_BASELINE.keys())}")
+# ── Startup: load model once ──────────────────────────────────────────────────
+_pipeline, _meta = load_model()
+V3_CITIES   = [c.replace('City_', '') for c in _meta['city_mappings']]
+V3_RELIABLE = set(_meta['reliable_cities'])
+print(f"[INIT] Model loaded — {len(V3_CITIES)} V3 cities, {len(V3_RELIABLE)} reliable")
 
 app = Flask(__name__)
 CORS(app)
 
-# ══════════════════════════════════════════════════════════════
-# STATIC DATA
-# ══════════════════════════════════════════════════════════════
+# ── Static data ───────────────────────────────────────────────────────────────
 CITY_NAMES = {
-    '0':'Ahmedabad','1':'Bengaluru','2':'Chennai','3':'Coimbatore',
-    '4':'Delhi','5':'Ghaziabad','6':'Hyderabad','7':'Indore',
-    '8':'Jaipur','9':'Kanpur','10':'Kochi','11':'Kolkata',
-    '12':'Kozhikode','13':'Lucknow','14':'Mumbai','15':'Nagpur',
+    '0':'Ahmedabad','1':'Bengaluru','2':'Chennai',
+    '4':'Delhi','5':'Ghaziabad',
+    '7':'Indore','8':'Jaipur','9':'Kanpur','11':'Kolkata',
+    '13':'Lucknow','14':'Mumbai','15':'Nagpur',
     '16':'Patna','17':'Pune','18':'Surat'
 }
 CRIME_NAMES = {
@@ -46,88 +41,27 @@ CRIME_NAMES = {
     '6':'Cyber Crimes','7':'Economic Offences','8':'Kidnapping','9':'Murder'
 }
 POPULATION_LAKH = {
-    '0':63.5,'1':85.0,'2':87.0,'3':21.5,'4':163.1,'5':23.6,
-    '6':77.5,'7':21.7,'8':30.7,'9':29.2,'10':21.2,'11':141.1,
-    '12':20.3,'13':29.0,'14':184.1,'15':25.0,'16':20.5,'17':50.5,'18':45.8
+    '0':63.5,'1':85.0,'2':87.0,
+    '4':163.1,'5':23.6,
+    '7':21.7,'8':30.7,'9':29.2,'11':141.1,
+    '13':29.0,'14':184.1,'15':25.0,
+    '16':20.5,'17':50.5,'18':45.8
 }
 
-# Map UI city names → V3 training city names (None = not in V3)
-UI_TO_V3 = {
-    'Bengaluru':  'Bangalore',
-    'Hyderabad':  None,          # not in V3 city_mappings
-    'Kozhikode':  None,          # not in V3 training data
-    'Coimbatore': None,          # not in V3 training data
-    'Kochi':      None,          # not in V3 training data
-}
+# Map UI city names → V3 training city names
+UI_TO_V3 = {'Bengaluru': 'Bangalore'}
 
-# ══════════════════════════════════════════════════════════════
-# DB
-# ══════════════════════════════════════════════════════════════
-def init_db():
-    conn = sqlite3.connect('crime.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS predictions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        city TEXT, year INTEGER, crime_type TEXT,
-        crime_rate REAL, std REAL,
-        confidence TEXT, reliable INTEGER,
-        cases INTEGER,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )''')
-    conn.commit(); conn.close()
-
-# ══════════════════════════════════════════════════════════════
-# V3 PREDICT (only model)
-# ══════════════════════════════════════════════════════════════
-def v3_predict(city_name, year):
-    v3_city = UI_TO_V3.get(city_name, city_name)
-    if v3_city is None or v3_city not in V3_CITIES:
-        return None
-    baseline = CITY_BASELINE.get(v3_city)
-    if baseline is None:
-        return None
-
-    pop = baseline['Population']
-    row = {
-        'Year': year, 'Population': pop, 'City': v3_city,
-        'Assault':      baseline['Assault'],
-        'Burglary':     baseline['Burglary'],
-        'Homicide':     baseline['Homicide'],
-        'Other Crimes': baseline['Other Crimes'],
-        'Robbery':      baseline['Robbery'],
-        'Theft':        baseline['Theft'],
-    }
-    df_row = pd.DataFrame([row])
-    rate   = float(v3_pipe.predict(df_row)[0])
-
-    rf = v3_pipe.named_steps['randomforestregressor']
-    preprocessor = v3_pipe[:-1]
-    X_trans    = preprocessor.transform(df_row)
-    tree_preds = np.array([t.predict(X_trans) for t in rf.estimators_])
-    std = float(tree_preds.std())
-
-    rate = round(max(rate, 0), 2)
-    std  = round(std, 2)
-    if std <= V3_P50:   conf = 'High'
-    elif std <= V3_P95: conf = 'Moderate'
-    else:               conf = 'Low'
-    return {
-        'rate': rate, 'std': std, 'confidence': conf,
-        'reliable': v3_city in V3_RELIABLE
-    }
-
-# ══════════════════════════════════════════════════════════════
-# ROUTES
-# ══════════════════════════════════════════════════════════════
+# ── Routes ─────────────────────────────────────────────────────────────────────
 @app.route('/api/meta')
 def meta():
     return jsonify({
-        'cities':     [{'value':k,'label':v} for k,v in CITY_NAMES.items()],
-        'crimeTypes': [{'value':k,'label':v} for k,v in CRIME_NAMES.items()],
-        'yearRange':  {'min':2014,'max':2035},
+        'cities':       [{'value': k, 'label': v} for k, v in CITY_NAMES.items()],
+        'crimeTypes':   [{'value': k, 'label': v} for k, v in CRIME_NAMES.items()],
+        'yearRange':    {'min': 2014, 'max': 2035},
         'modelVersion': 'v3_combined',
         'reliableCities': list(V3_RELIABLE),
     })
+
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
@@ -136,19 +70,37 @@ def predict():
     crime_code = str(data['crime'])
     year       = int(data['year'])
 
+    if city_code not in CITY_NAMES:
+        return jsonify({'error': f'City code {city_code} is not supported.'}), 422
+
     city_name  = CITY_NAMES[city_code]
-    crime_type = CRIME_NAMES[crime_code]
-    pop_lakh   = POPULATION_LAKH[city_code]
+    crime_type = CRIME_NAMES.get(crime_code, 'Unknown')
+    pop_lakh   = POPULATION_LAKH.get(city_code, 50.0)
     pop_lakh   = round(pop_lakh + 0.01 * (year - 2011) * pop_lakh, 3)
 
-    v3 = v3_predict(city_name, year)
-    if v3 is None:
-        return jsonify({'error': f'"{city_name}" is not in the V3 model training data. Please choose another city.'}), 422
+    # Map UI city → V3 canonical name
+    v3_city = UI_TO_V3.get(city_name, city_name)
 
-    crime_rate = v3['rate']
-    std        = v3['std']
-    confidence = v3['confidence']
-    reliable   = v3['reliable']
+    # Use validate_and_prepare from predict_utils
+    try:
+        df_row, warnings = validate_and_prepare(
+            {'city': v3_city, 'year': year},
+            _meta
+        )
+    except ValueError as ve:
+        msg = str(ve)
+        try:
+            detail = json.loads(msg)
+            return jsonify({'error': f'"{city_name}" is not in the V3 model training data.',
+                           'detail': detail}), 422
+        except Exception:
+            return jsonify({'error': msg}), 422
+
+    # Predict via model_loader
+    mean, std, confidence, model_version = predict_with_uncertainty(df_row.iloc[0].to_dict())
+
+    crime_rate = round(mean, 2)
+    reliable   = v3_city in V3_RELIABLE
     cases      = math.ceil(crime_rate * pop_lakh)
 
     if crime_rate <= 1:    status, color = 'Very Low',  '#2ecc71'
@@ -157,11 +109,15 @@ def predict():
     else:                  status, color = 'Very High', '#e74c3c'
     severity = min(round((crime_rate / 15) * 100, 1), 100)
 
-    # Trend (5 yr — V3 with same baselines, changing year)
+    # Trend 5yr
     trend = []
     for i in range(1, 6):
-        r = v3_predict(city_name, year + i)
-        trend.append({'year': year + i, 'rate': r['rate'] if r else crime_rate})
+        try:
+            r_row, _ = validate_and_prepare({'city': v3_city, 'year': year + i}, _meta)
+            fr, *_   = predict_with_uncertainty(r_row.iloc[0].to_dict())
+        except Exception:
+            fr = crime_rate
+        trend.append({'year': year + i, 'rate': round(float(fr), 2)})
 
     # Chart
     plt.figure(figsize=(5, 3))
@@ -193,20 +149,20 @@ def predict():
         policies = ['Maintain current law-enforcement presence',
                     'Continue community outreach initiatives']
 
-    # Save to DB
-    conn = sqlite3.connect('crime.db')
-    c = conn.cursor()
-    c.execute('''INSERT INTO predictions
-                 (city,year,crime_type,crime_rate,std,confidence,reliable,cases)
-                 VALUES (?,?,?,?,?,?,?,?)''',
-              (city_name, year, crime_type, crime_rate, std, confidence, int(reliable), cases))
-    conn.commit(); conn.close()
+    # Log via log_predict
+    log_prediction(
+        city=city_name, year=year,
+        population=pop_lakh * 1e5,
+        prediction=crime_rate, pred_std=std,
+        confidence=confidence, model_version=model_version,
+        notes={'warnings': warnings, 'crime_type': crime_type, 'reliable': reliable}
+    )
 
     return jsonify({
         'city': city_name, 'crimeType': crime_type, 'year': year,
         'modelUsed': 'v3_combined',
         'primary': {
-            'crimeRate': crime_rate, 'std': std, 'confidence': confidence,
+            'crimeRate': crime_rate, 'std': round(std, 2), 'confidence': confidence,
             'cases': cases, 'population': pop_lakh,
             'status': status, 'statusColor': color, 'severity': severity,
         },
@@ -214,40 +170,49 @@ def predict():
         'trend':    trend,
         'graph':    graph_b64,
         'policies': policies,
+        'warnings': warnings,
     })
+
 
 @app.route('/api/history')
 def history():
-    conn = sqlite3.connect('crime.db')
+    conn = sqlite3.connect('crime_predictions.db')
     c = conn.cursor()
-    c.execute('''SELECT id,city,year,crime_type,crime_rate,std,confidence,reliable,cases,created_at
+    c.execute('''SELECT id, city, year,
+                        json_extract(notes, '$.crime_type'),
+                        prediction, pred_std, confidence,
+                        json_extract(notes, '$.reliable'),
+                        CAST(population / 1e5 AS REAL),
+                        ts
                  FROM predictions ORDER BY id DESC LIMIT 50''')
     rows = c.fetchall()
     conn.close()
     return jsonify([{
-        'id':r[0],'city':r[1],'year':r[2],'crimeType':r[3],
-        'crimeRate':r[4],'std':r[5],'confidence':r[6],
-        'reliable':bool(r[7]),'cases':r[8],'createdAt':r[9]
+        'id': r[0], 'city': r[1], 'year': r[2], 'crimeType': r[3] or '—',
+        'crimeRate': r[4], 'std': r[5], 'confidence': r[6],
+        'reliable': bool(r[7]), 'population': r[8], 'createdAt': r[9]
     } for r in rows])
+
 
 @app.route('/api/stats')
 def stats():
-    conn = sqlite3.connect('crime.db')
+    conn = sqlite3.connect('crime_predictions.db')
     c = conn.cursor()
     c.execute('SELECT COUNT(*) FROM predictions')
     total = c.fetchone()[0]
-    c.execute('SELECT city, AVG(crime_rate) FROM predictions GROUP BY city ORDER BY AVG(crime_rate) DESC LIMIT 1')
+    c.execute('SELECT city, AVG(prediction) FROM predictions GROUP BY city ORDER BY AVG(prediction) DESC LIMIT 1')
     highest = c.fetchone()
-    c.execute('SELECT city, AVG(crime_rate) FROM predictions GROUP BY city ORDER BY AVG(crime_rate) ASC LIMIT 1')
-    safest  = c.fetchone()
+    c.execute('SELECT city, AVG(prediction) FROM predictions GROUP BY city ORDER BY AVG(prediction) ASC LIMIT 1')
+    safest = c.fetchone()
     conn.close()
     return jsonify({
         'totalPredictions': total,
-        'highestCity':  highest[0] if highest else '—',
-        'safestCity':   safest[0]  if safest  else '—',
-        'modelsActive': 1,
-        'productionModel': 'V3 Combined (R²=0.92, 400 trees)',
+        'highestCity':      highest[0] if highest else '—',
+        'safestCity':       safest[0]  if safest  else '—',
+        'modelsActive':     1,
+        'productionModel':  'V3 Combined (R²=0.92, 400 trees)',
     })
+
 
 if __name__ == '__main__':
     init_db()
