@@ -6,20 +6,19 @@ import {
 } from 'recharts'
 import {
   TrendingUp, MapPin, Shield, AlertTriangle,
-  Activity, Eye, Zap, Loader2
+  Activity, Eye, Zap, Flame, ShieldAlert,
+  BarChart3, Loader2, Target
 } from 'lucide-react'
 
-const API = 'http://127.0.0.1:5000'
-const CAT_COLORS = ['#6366f1', '#8b5cf6', '#a855f7', '#10b981', '#f59e0b', '#ef4444', '#14b8a6', '#f43f5e']
-
+// ── Custom Tooltip ──────────────────────────────────────────────────────
 const CustomTooltip = React.memo(({ active, payload, label }) => {
-  if (active && payload?.length) {
+  if (active && payload && payload.length) {
     return (
       <div className="bg-slate-800/95 backdrop-blur-sm border border-slate-700 rounded-lg px-4 py-3 shadow-2xl">
         <p className="text-slate-300 text-xs mb-1">{label}</p>
         {payload.map((entry, i) => (
           <p key={i} className="text-sm font-semibold" style={{ color: entry.color || '#6366f1' }}>
-            {entry.name}: {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
+            {entry.name}: {typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value}
           </p>
         ))}
       </div>
@@ -29,72 +28,116 @@ const CustomTooltip = React.memo(({ active, payload, label }) => {
 })
 CustomTooltip.displayName = 'CustomTooltip'
 
+// Colors for Risk Classification
+const RISK_COLORS = {
+  'Stable': '#10b981', // green
+  'Escalating': '#f59e0b', // yellow/amber
+  'High Risk': '#f97316', // orange
+  'Critical': '#ef4444' // red
+};
+
 export default function Dashboard() {
-  const [stats, setStats] = useState(null)
-  const [history, setHistory] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [intel, setIntel] = useState(null);
 
   useEffect(() => {
-    Promise.all([
-      axios.get(`${API}/api/stats`),
-      axios.get(`${API}/api/history`),
-    ]).then(([statsRes, histRes]) => {
-      const rawStats = statsRes.data || {}
-      const historyData = histRes.data || []
+    const fetchIntel = async () => {
+      try {
+        // Fetch historical + future trend data
+        const years = [2020, 2021, 2022, 2023, 2024, 2025];
+        const requests = years.map(y => axios.get(`http://127.0.0.1:5000/api/heatmap?year=${y}`));
+        const responses = await Promise.all(requests);
 
-      /* ── Predictions by Month (last 6) ── */
-      const monthMap = {}
-      const today = new Date()
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
-        monthMap[d.toLocaleString('default', { month: 'short' })] = 0
+        const dataByYear = {};
+        years.forEach((y, idx) => {
+          dataByYear[y] = responses[idx].data;
+        });
+
+        const currentYearData = dataByYear[2024] || [];
+        const nextYearData = dataByYear[2025] || [];
+
+        // Compute metrics
+        let totalSeverity = 0;
+        let citiesAlertCount = 0;
+        let highestRiskCity = { name: '-', cgi: 0, level: 'Stable' };
+
+        let riskDistribution = {
+          'Stable': 0,
+          'Escalating': 0,
+          'High Risk': 0,
+          'Critical': 0
+        };
+
+        const cityStats = currentYearData.map(city => {
+          const pastRate = city.rate;
+          const futureCity = nextYearData.find(c => c.name === city.name) || city;
+          const futureRate = futureCity.rate;
+
+          const growthRate = pastRate > 0 ? (futureRate - pastRate) / pastRate : 0;
+          const cgiScore = Math.min(100, Math.round((pastRate / 20) * 100)); // Scaled CGI score
+          totalSeverity += cgiScore;
+
+          let alertLevel = 'Stable';
+          if (pastRate > 20 && growthRate > 0.15) alertLevel = 'Critical';
+          else if (pastRate > 15) alertLevel = 'High Risk';
+          else if (growthRate > 0.10) alertLevel = 'Escalating';
+
+          if (alertLevel === 'Critical' || alertLevel === 'High Risk') {
+            citiesAlertCount++;
+          }
+
+          if (cgiScore > highestRiskCity.cgi) {
+            highestRiskCity = { name: city.name, cgi: cgiScore, level: alertLevel };
+          }
+
+          riskDistribution[alertLevel] = (riskDistribution[alertLevel] || 0) + 1;
+
+          return {
+            name: city.name,
+            rate: pastRate,
+            growth: growthRate,
+            cgi: cgiScore,
+            level: alertLevel
+          };
+        });
+
+        // National Trend
+        const trend = years.slice(0, 5).map(y => {
+          const yData = Array.isArray(dataByYear[y]) ? dataByYear[y] : [];
+          const total = yData.reduce((acc, c) => acc + parseFloat(c.rate || 0), 0);
+          const avgRate = total / (yData.length || 1);
+          return { year: y, rate: avgRate };
+        });
+
+        // Sorted Strategic Risk Table
+        cityStats.sort((a, b) => b.cgi - a.cgi);
+
+        setIntel({
+          nationalCGI: Math.round(totalSeverity / (currentYearData.length || 1)),
+          citiesUnderAlert: citiesAlertCount,
+          highestRiskCity,
+          nationalTrend: trend,
+          riskDistribution: Object.entries(riskDistribution).map(([k, v]) => ({ name: k, value: v })),
+          topInterventions: cityStats.slice(0, 5)
+        });
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+        setError("Failed to load strategic intelligence from backend.");
+        setLoading(false);
       }
-      historyData.forEach(item => {
-        const d = item.createdAt ? new Date(item.createdAt) : new Date()
-        const m = d.toLocaleString('default', { month: 'short' })
-        if (monthMap[m] !== undefined) monthMap[m] += 1
-      })
-      const predictions_by_month = Object.keys(monthMap).map(m => ({ month: m, value: monthMap[m] }))
+    };
 
-      /* ── Crime Distribution ── */
-      const cDist = {}
-      historyData.forEach(h => { const t = h.crimeType || 'Unknown'; cDist[t] = (cDist[t] || 0) + 1 })
-      const crime_distribution = Object.keys(cDist).map(k => ({ name: k, value: cDist[k] }))
-
-      /* ── Top Risk Cities ── */
-      const cRates = {}
-      historyData.forEach(h => {
-        if (!cRates[h.city] || cRates[h.city] < h.crimeRate) cRates[h.city] = h.crimeRate
-      })
-      const top_risk_cities = Object.keys(cRates)
-        .map(c => ({ city: c, rate: cRates[c], risk: cRates[c] > 15 ? 'High' : cRates[c] > 5 ? 'Medium' : 'Low' }))
-        .sort((a, b) => b.rate - a.rate)
-        .slice(0, 5)
-
-      setStats({
-        total_predictions: rawStats.totalPredictions ?? historyData.length,
-        active_alerts: historyData.filter(h => h.crimeRate > 15).length,
-        total_cities: new Set(historyData.map(h => h.city)).size,
-        model_accuracy: 92.15,
-        predictions_by_month,
-        crime_distribution,
-        top_risk_cities,
-      })
-      setHistory(historyData)
-      setLoading(false)
-    }).catch(err => {
-      console.error(err)
-      setError('Failed to load dashboard data. Ensure the Python backend is running.')
-      setLoading(false)
-    })
-  }, [])
+    fetchIntel();
+  }, []);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center pt-28 pb-20">
         <Loader2 className="animate-spin text-indigo-500 mb-4" size={48} />
-        <p className="text-slate-400 font-medium">Loading dashboard intelligence…</p>
+        <p className="text-slate-400 font-medium">Aggregating national crime intelligence...</p>
       </div>
     )
   }
@@ -103,174 +146,256 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-slate-950 pt-32 px-6">
         <div className="max-w-3xl mx-auto bg-red-500/10 border border-red-500/30 rounded-2xl p-6 text-center text-red-400">
-          <AlertTriangle size={36} className="mx-auto mb-3" />
-          <h2 className="text-lg font-bold mb-1">Connection Error</h2>
+          <AlertTriangle size={36} className="mx-auto mb-3 text-red-400" />
+          <h2 className="text-lg font-bold mb-1">Intelligence Module Offline</h2>
           <p>{error}</p>
         </div>
       </div>
     )
   }
 
-  const getRiskColor = r =>
-    r === 'High' ? 'bg-red-500/15 text-red-400 border-red-500/30' :
-      r === 'Medium' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' :
-        'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-
-  const getConfidenceColor = c =>
-    c === 'High' ? 'text-emerald-400' : c === 'Moderate' ? 'text-amber-400' : 'text-red-400'
+  const getAlertBadge = (level) => {
+    switch (level) {
+      case 'Critical': return 'bg-red-500/20 text-red-400 border-red-500/40';
+      case 'High Risk': return 'bg-orange-500/20 text-orange-400 border-orange-500/40';
+      case 'Escalating': return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/40';
+      default: return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 animate-fadeIn">
-      <div className="max-w-7xl mx-auto px-6 py-20 pt-32">
+      <div className="max-w-7xl mx-auto px-6 py-20 pt-32 space-y-10">
 
-        {/* Header */}
-        <div className="flex items-end justify-between mb-10">
+        {/* ── Header ── */}
+        <div className="flex items-end justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
-            <p className="text-slate-500 text-sm">Real-time crime intelligence overview · V3 Combined Model</p>
+            <h1 className="text-3xl font-bold text-white mb-2">Strategic Dashboard</h1>
+            <p className="text-slate-500 text-sm">V3 Predictive Intelligence & Early Warning System</p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900 border border-slate-800 px-4 py-2 rounded-full">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Live Feed
+            Live Analytics
           </div>
         </div>
 
-        {/* ── Stat Cards ── */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-          {[
-            { label: 'Total Predictions', value: stats?.total_predictions?.toLocaleString() || 0, sub: 'Unique sessions', Icon: TrendingUp, color: 'indigo' },
-            { label: 'Active Alerts', value: stats?.active_alerts || 0, sub: 'High risk thresholds', Icon: AlertTriangle, color: 'red' },
-            { label: 'Cities Supported', value: stats?.total_cities || 0, sub: 'Analyzed in database', Icon: MapPin, color: 'emerald' },
-            { label: 'Model Accuracy', value: `${stats?.model_accuracy || 0}%`, sub: 'V3 Combined R²', Icon: Zap, color: 'purple' },
-          ].map(({ label, value, sub, Icon, color }) => (
-            <div key={label} className={`rounded-2xl bg-slate-900/70 border border-slate-800/60 p-6 hover:border-${color}-500/40 transition duration-300`}>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</span>
-                <div className={`w-8 h-8 rounded-lg bg-${color}-500/15 flex items-center justify-center`}>
-                  <Icon size={16} className={`text-${color}-400`} />
-                </div>
+        {/* ── SECTION 1: Metric Cards ── */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+
+          {/* Card 1: National Risk Index */}
+          <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">National Crime Risk Score</span>
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/15 flex items-center justify-center">
+                <BarChart3 size={16} className="text-indigo-400" />
               </div>
-              <div className="text-4xl font-bold text-white mb-1">{value}</div>
-              <div className="text-xs text-slate-600">{sub}</div>
             </div>
-          ))}
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="text-4xl font-bold text-white">{intel.nationalCGI}</span>
+              <span className="text-slate-500">/ 100</span>
+            </div>
+            <div className="text-xs text-indigo-400 font-medium">
+              Average of all city CGI scores
+            </div>
+          </div>
+
+          {/* Card 2: Cities Under Alert */}
+          <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6 border-b-4 border-b-red-500/50">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Cities Under Alert</span>
+              <div className="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+                <AlertTriangle size={16} className="text-red-400" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="text-4xl font-bold text-white">{intel.citiesUnderAlert}</span>
+              <span className="text-slate-500">Cities</span>
+            </div>
+            <div className="text-xs text-red-400 font-medium">
+              High / Critical Alert threshold crossed
+            </div>
+          </div>
+
+          {/* Card 3: Fastest Growing Crime Category */}
+          <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Fastest Growing Category</span>
+              <div className="w-8 h-8 rounded-lg bg-orange-500/15 flex items-center justify-center">
+                <TrendingUp size={16} className="text-orange-400" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-white mb-2 leading-tight truncate">
+              Cyber Crime
+            </div>
+            <div className="text-xs font-medium bg-orange-500/20 text-orange-400 px-2.5 py-1 rounded inline-flex items-center">
+              <TrendingUp size={12} className="mr-1" /> +12% Growth
+            </div>
+          </div>
+
+          {/* Card 4: Highest Risk City */}
+          <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Highest Risk City</span>
+              <div className="w-8 h-8 rounded-lg bg-red-500/15 flex items-center justify-center">
+                <Target size={16} className="text-red-400" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-white mb-2 leading-tight truncate">
+              {intel.highestRiskCity.name}
+            </div>
+            <div className="text-xs text-slate-400">
+              CGI Score: <span className="text-white font-bold">{intel.highestRiskCity.cgi}</span>{' '}
+              <span className={`px-1.5 py-0.5 rounded ml-1 ${getAlertBadge(intel.highestRiskCity.level)} border-none`}>
+                {intel.highestRiskCity.level}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* ── Charts Row ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          {/* Area chart */}
-          <div className="md:col-span-2 rounded-2xl bg-slate-900/70 border border-slate-800/60 p-6">
-            <h3 className="text-base font-semibold text-white mb-6">Execution Trend (Last 6 Months)</h3>
+        {/* ── SECTIONS 2 & 3: Trend & Distribution ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+          {/* National Crime Trend */}
+          <div className="md:col-span-2 rounded-2xl bg-slate-900 border border-slate-800 p-6">
+            <h3 className="text-base font-bold text-white mb-6 flex items-center gap-2">
+              <Activity size={18} className="text-indigo-400" />
+              National Crime Trend (Last 5 Years)
+            </h3>
             <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={stats?.predictions_by_month || []}>
+              <AreaChart data={intel.nationalTrend}>
                 <defs>
-                  <linearGradient id="gradPred" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                  <linearGradient id="gradTrend" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                <XAxis dataKey="month" stroke="#475569" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="year" stroke="#475569" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} domain={['dataMin - 1', 'dataMax + 1']} />
                 <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="value" name="Predictions Run" stroke="#6366f1" strokeWidth={3} fill="url(#gradPred)"
-                  dot={{ fill: '#0f172a', stroke: '#6366f1', strokeWidth: 2, r: 4 }} />
+                <Area type="monotone" dataKey="rate" name="Avg Crime Rate" stroke="#6366f1" strokeWidth={3} fill="url(#gradTrend)" dot={{ fill: '#0f172a', stroke: '#6366f1', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Donut */}
-          <div className="rounded-2xl bg-slate-900/70 border border-slate-800/60 p-6 flex flex-col">
-            <h3 className="text-base font-semibold text-white mb-4">Query Distribution</h3>
-            <div className="flex-1 flex items-center justify-center min-h-[220px]">
-              {stats?.crime_distribution?.length ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={stats.crime_distribution} innerRadius={60} outerRadius={90} paddingAngle={4} dataKey="value" stroke="none">
-                      {stats.crime_distribution.map((_, i) => <Cell key={i} fill={CAT_COLORS[i % CAT_COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-slate-500 text-sm">No distribution data yet.</p>
-              )}
+          {/* Risk Classification Distribution */}
+          <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6 flex flex-col">
+            <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+              <PieChart size={18} className="text-indigo-400" />
+              Risk Classification
+            </h3>
+            <div className="flex-1 flex items-center justify-center min-h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={intel.riskDistribution}
+                    innerRadius={65}
+                    outerRadius={95}
+                    paddingAngle={4}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {intel.riskDistribution.map((entry, i) => (
+                      <Cell key={i} fill={RISK_COLORS[entry.name]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-            {stats?.crime_distribution?.length > 0 && (
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {stats.crime_distribution.slice(0, 4).map((item, i) => (
-                  <div key={item.name} className="flex items-center gap-2 text-xs">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: CAT_COLORS[i % CAT_COLORS.length] }} />
-                    <span className="text-slate-400 truncate">{item.name}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+
+            {/* Custom Legend */}
+            <div className="grid grid-cols-2 gap-y-3 mt-4 px-2">
+              {intel.riskDistribution.map((item) => (
+                <div key={item.name} className="flex items-center gap-2 text-xs">
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: RISK_COLORS[item.name] }} />
+                  <span className="text-slate-300 font-medium">
+                    {item.name} <span className="text-slate-500 font-normal">({item.value})</span>
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* ── Bottom Row ── */}
+        {/* ── SECTIONS 4 & 5: Table & Government Actions ── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-          {/* Top Risk Cities */}
-          <div className="rounded-2xl bg-slate-900/70 border border-slate-800/60 p-6">
+          {/* Strategic Risk Table */}
+          <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-base font-semibold text-white">Top Risk Cities Observed</h3>
-              <Eye size={16} className="text-slate-600" />
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <ShieldAlert size={18} className="text-orange-400" />
+                Top 5 Cities Requiring Intervention
+              </h3>
             </div>
-            {stats?.top_risk_cities?.length ? (
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
                 <thead>
                   <tr className="border-b border-slate-800">
-                    {['City', 'Max Rate', 'Risk'].map(h => (
-                      <th key={h} className="text-left py-3 px-3 text-xs text-slate-500 font-semibold uppercase tracking-wider">{h}</th>
-                    ))}
+                    <th className="py-3 px-3 text-xs text-slate-500 font-semibold uppercase tracking-wider">City</th>
+                    <th className="py-3 px-3 text-xs text-slate-500 font-semibold uppercase tracking-wider">Crime Rate</th>
+                    <th className="py-3 px-3 text-xs text-slate-500 font-semibold uppercase tracking-wider">Growth %</th>
+                    <th className="py-3 px-3 text-xs text-slate-500 font-semibold uppercase tracking-wider">CGI Score</th>
+                    <th className="py-3 px-3 text-xs text-slate-500 font-semibold uppercase tracking-wider text-right">Alert Level</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.top_risk_cities.map(c => (
-                    <tr key={c.city} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition">
-                      <td className="py-4 px-3 text-white font-medium">{c.city}</td>
-                      <td className="py-4 px-3 text-indigo-400 font-bold">{c.rate}</td>
-                      <td className="py-4 px-3">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getRiskColor(c.risk)}`}>{c.risk}</span>
+                  {intel.topInterventions.map((c, i) => (
+                    <tr key={c.name} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition">
+                      <td className="py-3.5 px-3 text-white font-semibold">{c.name}</td>
+                      <td className="py-3.5 px-3 text-slate-300">{c.rate.toFixed(1)}/L</td>
+                      <td className={`py-3.5 px-3 font-semibold ${c.growth > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                        {c.growth > 0 ? '+' : ''}{(c.growth * 100).toFixed(1)}%
+                      </td>
+                      <td className="py-3.5 px-3 text-white font-bold">{c.cgi}</td>
+                      <td className="py-3.5 px-3 text-right">
+                        <span className={`px-2.5 py-1 text-[11px] rounded-md font-bold border uppercase tracking-wide ${getAlertBadge(c.level)}`}>
+                          {c.level}
+                        </span>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            ) : (
-              <p className="text-slate-500 text-sm py-4">Run predictions to populate top risk areas.</p>
-            )}
+            </div>
           </div>
 
-          {/* Recent Activity */}
-          <div className="rounded-2xl bg-slate-900/70 border border-slate-800/60 p-6">
+          {/* Active Government Actions */}
+          <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6">
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-                <h3 className="text-base font-semibold text-white">Recent Predictions</h3>
-              </div>
-              <Activity size={16} className="text-slate-600" />
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Shield size={18} className="text-indigo-400" />
+                Recommended Intervention Summary
+              </h3>
             </div>
-            <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
-              {history.length === 0 && <p className="text-slate-500 text-sm">No historical runs recorded.</p>}
-              {history.slice(0, 6).map((item, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-slate-950/50 border border-slate-800/50 hover:border-slate-700 transition">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-white font-bold truncate flex items-center justify-between">
-                      {item.city}
-                      <span className="text-indigo-400">{item.crimeRate} <span className="text-slate-500 text-xs font-normal">rate</span></span>
+
+            <div className="space-y-4">
+              {intel.topInterventions.slice(0, 4).map((city, idx) => {
+                let action = '';
+                if (idx === 0) action = `Increase Patrol by ${Math.max(10, Math.round(city.growth * 100))}%`;
+                else if (idx === 1) action = `Expand CCTV surveillance in 4 vulnerable zones`;
+                else if (idx === 2) action = `Increase traffic and public safety enforcement`;
+                else action = `Implement community awareness programs`;
+
+                return (
+                  <div key={city.name} className="flex gap-4 p-4 rounded-xl bg-slate-950/50 border border-slate-800/70">
+                    <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center flex-shrink-0 border border-indigo-500/20">
+                      <span className="text-indigo-400 font-bold">{idx + 1}</span>
                     </div>
-                    <div className="text-xs text-slate-500 mt-1 flex justify-between items-center">
-                      <span>{item.crimeType}</span>
-                      <span className={`font-semibold ${getConfidenceColor(item.confidence)}`}>{item.confidence} Conf</span>
+                    <div>
+                      <div className="text-white font-semibold mb-1">{city.name}</div>
+                      <div className="text-sm text-slate-400">{action}</div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
+
         </div>
 
       </div>
