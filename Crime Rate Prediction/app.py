@@ -546,6 +546,10 @@ def heatmap():
 
     results = []
     for city_code, city_name in CITY_NAMES.items():
+        # Exclude satellite cities as requested
+        if city_name in {'Kalyan', 'Thane', 'Faridabad', 'Ghaziabad'}:
+            continue
+
         pop_lakh = POPULATION_LAKH.get(city_code, 30.0)
         pop_lakh = round(pop_lakh + 0.01 * (year - 2011) * pop_lakh, 3)
         v3_city  = UI_TO_V3.get(city_name, city_name)
