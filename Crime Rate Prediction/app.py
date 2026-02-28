@@ -83,6 +83,216 @@ CRIME_TYPE_NOTICE = (
 
 UI_TO_V3 = {'Bengaluru': 'Bangalore'}
 
+# ── City coordinates (lat, lng) for Leaflet map ────────────────────────────────
+CITY_COORDS = {
+    'Agra':           (27.1767,  78.0081),
+    'Ahmedabad':      (23.0225,  72.5714),
+    'Bengaluru':      (12.9716,  77.5946),
+    'Bhopal':         (23.2599,  77.4126),
+    'Chennai':        (13.0827,  80.2707),
+    'Delhi':          (28.6139,  77.2090),
+    'Faridabad':      (28.4089,  77.3178),
+    'Ghaziabad':      (28.6692,  77.4538),
+    'Jaipur':         (26.9124,  75.7873),
+    'Kalyan':         (19.2403,  73.1305),
+    'Kolkata':        (22.5726,  88.3639),
+    'Lucknow':        (26.8467,  80.9462),
+    'Ludhiana':       (30.9010,  75.8573),
+    'Mumbai':         (19.0760,  72.8777),
+    'Nagpur':         (21.1458,  79.0882),
+    'Nashik':         (19.9975,  73.7898),
+    'Patna':          (25.5941,  85.1376),
+    'Pune':           (18.5204,  73.8567),
+    'Srinagar':       (34.0836,  74.7973),
+    'Surat':          (21.1702,  72.8311),
+    'Thane':          (19.2183,  72.9781),
+    'Varanasi':       (25.3176,  82.9739),
+    'Visakhapatnam':  (17.6868,  83.2185),
+}
+
+# ── Region population ratio mapping (ratios sum to ~1.0 per city) ────────────
+REGION_POPULATION_RATIO = {
+    'Delhi': {
+        'Central Delhi':    0.08,
+        'North Delhi':      0.10,
+        'South Delhi':      0.15,
+        'East Delhi':       0.12,
+        'West Delhi':       0.14,
+        'North West Delhi': 0.11,
+        'South West Delhi': 0.10,
+        'Shahdara':         0.10,
+        'New Delhi':        0.10,
+    },
+    'Mumbai': {
+        'South Mumbai': 0.10,
+        'Dadar':        0.08,
+        'Bandra':       0.10,
+        'Andheri':      0.15,
+        'Borivali':     0.12,
+        'Goregaon':     0.10,
+        'Kurla':        0.10,
+        'Chembur':      0.08,
+        'Mulund':       0.07,
+        'Colaba':       0.10,
+    },
+    'Bengaluru': {
+        'East Zone':      0.16,
+        'West Zone':      0.14,
+        'South Zone':     0.18,
+        'North Zone':     0.15,
+        'Mahadevapura':   0.12,
+        'Bommanahalli':   0.10,
+        'Yelahanka':      0.15,
+    },
+    'Chennai': {
+        'Tondiarpet':    0.12,
+        'Royapuram':     0.10,
+        'Anna Nagar':    0.15,
+        'Teynampet':     0.14,
+        'Adyar':         0.13,
+        'Ambattur':      0.16,
+        'Sholinganallur': 0.20,
+    },
+    'Kolkata': {
+        'North Kolkata':   0.18,
+        'Central Kolkata': 0.15,
+        'South Kolkata':   0.20,
+        'East Kolkata':    0.12,
+        'Behala':          0.10,
+        'Salt Lake':       0.15,
+        'Jadavpur':        0.10,
+    },
+    'Ahmedabad': {
+        'Central':  0.15,
+        'East':     0.18,
+        'West':     0.20,
+        'North':    0.17,
+        'South':    0.20,
+        'New West': 0.10,
+    },
+    'Pune': {
+        'Shivajinagar': 0.12,
+        'Kothrud':      0.15,
+        'Hinjewadi':    0.18,
+        'Hadapsar':     0.14,
+        'Wakad':        0.13,
+        'Viman Nagar':  0.12,
+        'Baner':        0.16,
+    },
+    'Jaipur': {
+        'Walled City':  0.18,
+        'Mansarovar':   0.16,
+        'Vaishali':     0.15,
+        'Sanganer':     0.14,
+        'Malviya Nagar':0.20,
+        'Civil Lines':  0.17,
+    },
+    'Lucknow': {
+        'Hazratganj':  0.18,
+        'Gomti Nagar': 0.20,
+        'Aliganj':     0.17,
+        'Alambagh':    0.15,
+        'Chowk':       0.16,
+        'Indira Nagar':0.14,
+    },
+    'Nagpur': {
+        'Central':    0.20,
+        'East':       0.18,
+        'West':       0.17,
+        'North':      0.22,
+        'South':      0.23,
+    },
+    'Patna': {
+        'Patna City':  0.22,
+        'Patna Sahib': 0.18,
+        'Gandhi Maidan':0.20,
+        'Kankarbagh':  0.20,
+        'Boring Road': 0.20,
+    },
+    'Surat': {
+        'Adajan':   0.18,
+        'Katargam': 0.20,
+        'Vesu':     0.17,
+        'Rander':   0.15,
+        'Udhna':    0.30,
+    },
+    'Agra': {
+        'Tajganj':         0.20,
+        'Civil Lines':     0.18,
+        'Sikandra':        0.17,
+        'Dayalbagh':       0.22,
+        'Shahganj':        0.23,
+    },
+    'Bhopal': {
+        'New Bhopal':  0.22,
+        'Old Bhopal':  0.25,
+        'TT Nagar':    0.18,
+        'Kolar':       0.20,
+        'Berasia Road':0.15,
+    },
+    'Faridabad': {
+        'Sector 15':   0.20,
+        'NIT':         0.22,
+        'Ballabhgarh': 0.20,
+        'Old Faridabad':0.18,
+        'Sector 37':   0.20,
+    },
+    'Ghaziabad': {
+        'Indirapuram': 0.22,
+        'Vaishali':    0.20,
+        'Raj Nagar':   0.18,
+        'Kaushambi':   0.20,
+        'Loni':        0.20,
+    },
+    'Kalyan': {
+        'Kalyan East': 0.25,
+        'Kalyan West': 0.28,
+        'Dombivli E':  0.22,
+        'Dombivli W':  0.25,
+    },
+    'Ludhiana': {
+        'Central':     0.22,
+        'East':        0.20,
+        'West':        0.20,
+        'North':       0.18,
+        'South':       0.20,
+    },
+    'Nashik': {
+        'Nashik Road':  0.22,
+        'Cidco':        0.20,
+        'Satpur':       0.18,
+        'Deolali':      0.20,
+        'Panchvati':    0.20,
+    },
+    'Srinagar': {
+        'Downtown':    0.25,
+        'Cantonment':  0.20,
+        'Rajbagh':     0.18,
+        'Jawahar Nagar':0.17,
+        'Bemina':      0.20,
+    },
+    'Thane': {
+        'Thane East':  0.25,
+        'Thane West':  0.28,
+        'Kopri':       0.22,
+        'Vartak Nagar':0.25,
+    },
+    'Varanasi': {
+        'Cantonment':  0.20,
+        'Lanka':       0.18,
+        'Sigra':       0.20,
+        'Lahartara':   0.22,
+        'Bhelupur':    0.20,
+    },
+    'Visakhapatnam': {
+        'Gajuwaka':   0.22,
+        'Mvp Colony': 0.20,
+        'Dwaraka Nagar':0.18,
+        'Seethammadhara':0.20,
+        'Madhurawada':0.20,
+    },
+}
+
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 def _make_chart(trend_points: list) -> str:
@@ -323,6 +533,72 @@ def stats():
         'modelsActive':     1,
         'productionModel':  'V3 Combined (R²=0.92, 400 trees)',
     })
+
+
+@app.route('/api/heatmap')
+def heatmap():
+    """Return city-level + region-level crime predictions for ALL cities."""
+    year_raw = request.args.get('year', 2026)
+    try:
+        year = int(year_raw)
+    except (TypeError, ValueError):
+        return jsonify({'error': f"'year' must be an integer, got {year_raw!r}"}), 400
+
+    results = []
+    for city_code, city_name in CITY_NAMES.items():
+        pop_lakh = POPULATION_LAKH.get(city_code, 30.0)
+        pop_lakh = round(pop_lakh + 0.01 * (year - 2011) * pop_lakh, 3)
+        v3_city  = UI_TO_V3.get(city_name, city_name)
+        lat, lng = CITY_COORDS.get(city_name, (20.5937, 78.9629))  # fallback to centre of India
+
+        try:
+            df_row, _ = validate_and_prepare({'city': v3_city, 'year': year}, _meta)
+            mean, std, confidence, _ = predict_with_uncertainty(df_row.iloc[0].to_dict())
+        except Exception:
+            # If model cannot predict this city/year, skip gracefully
+            continue
+
+        city_rate = round(mean, 2)
+        reliable  = v3_city in V3_RELIABLE
+        cases     = math.ceil(city_rate * pop_lakh)
+
+        if city_rate < 8:    severity = 'Low'
+        elif city_rate < 15: severity = 'Moderate'
+        else:                severity = 'High'
+
+        # Build region breakdown
+        region_map = REGION_POPULATION_RATIO.get(city_name, {})
+        regions = []
+        for region_name, ratio in region_map.items():
+            r_rate = round(city_rate * ratio, 2)
+            if r_rate < 8:    r_sev = 'Low'
+            elif r_rate < 15: r_sev = 'Moderate'
+            else:             r_sev = 'High'
+            regions.append({
+                'name':     region_name,
+                'rate':     r_rate,
+                'severity': r_sev,
+                'ratio':    ratio,
+            })
+
+        results.append({
+            'cityCode':   city_code,
+            'name':       city_name,
+            'lat':        lat,
+            'lng':        lng,
+            'rate':       city_rate,
+            'std':        round(std, 2),
+            'confidence': confidence,
+            'severity':   severity,
+            'cases':      cases,
+            'population': pop_lakh,
+            'reliable':   reliable,
+            'regions':    regions,
+        })
+
+    # sort by rate descending so frontend can easily rank
+    results.sort(key=lambda x: x['rate'], reverse=True)
+    return jsonify(results)
 
 
 if __name__ == '__main__':
