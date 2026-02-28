@@ -144,7 +144,8 @@ export default function ResultPage({ result }) {
                             contentStyle={{ background: '#16213e', border: '1px solid #334', borderRadius: 8, color: '#e8e8f0', fontSize: 13 }}
                             labelStyle={{ color: '#8888aa' }}
                         />
-                        <Line type="monotone" dataKey="rate" stroke="#6c63ff" strokeWidth={2.5}
+                        <Line type="monotone" dataKey="pred" name="Projected Rate" stroke="#6c63ff" strokeWidth={2.5}
+                            strokeDasharray="6 3"
                             dot={{ r: 4, fill: '#6c63ff' }} activeDot={{ r: 6 }} />
                     </LineChart>
                 </ResponsiveContainer>
