@@ -302,7 +302,7 @@ export default function Prediction() {
                         className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-xl px-4 py-3 appearance-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                         required
                       >
-                        {Array.from({ length: 2035 - 2014 + 1 }, (_, i) => 2014 + i).map(y => (
+                        {Array.from({ length: 2035 - 2026 + 1 }, (_, i) => 2026 + i).map(y => (
                           <option key={y} value={y}>{y}</option>
                         ))}
                       </select>
