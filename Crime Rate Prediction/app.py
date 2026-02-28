@@ -43,6 +43,20 @@ from predict_utils import (
 )
 from log_predict import init_db, log_prediction
 
+# ── Prediction Caching ─────────────────────────────────────────────────────────
+_PRED_CACHE = {}
+
+def get_prediction_cached(canonical_city, year):
+    cache_key = (canonical_city, year)
+    if cache_key in _PRED_CACHE:
+        return _PRED_CACHE[cache_key]
+        
+    df_row, _ = validate_and_prepare({'city': canonical_city, 'year': year}, _meta)
+    res = predict_with_uncertainty(df_row.iloc[0].to_dict())
+    
+    _PRED_CACHE[cache_key] = res
+    return res
+
 # ── Startup ────────────────────────────────────────────────────────────────────
 _pipeline, _meta = load_model()
 V3_CANONICAL   = load_v3_cities()          # ['Agra', 'Ahmedabad', 'Bangalore', ...]
@@ -227,6 +241,294 @@ def _policies(crime_rate: float) -> list:
     return ['Maintain current law-enforcement presence', 'Continue community outreach initiatives']
 
 
+def _resource_allocation_recommendations(crime_type: str, crime_rate: float, city: str, population_lakh: float) -> dict:
+    """
+    🟡 RESOURCE ALLOCATION RECOMMENDATION ENGINE
+    Returns structured recommendations for government budget planning, manpower distribution,
+    and infrastructure investment based on crime type and severity.
+    
+    This is a MAJOR USP for government decision-making.
+    """
+    
+    # Normalize crime type for categorization
+    crime_lower = crime_type.lower()
+    
+    # Define crime categories
+    violent_crimes = ['murder', 'kidnapping', 'assault', 'rape', 'riots', 'dacoity', 'robbery']
+    property_crimes = ['theft', 'burglary', 'house breaking', 'auto theft', 'other theft']
+    traffic_crimes = ['road accident', 'accidents', 'hit and run']
+    cyber_crimes = ['cyber', 'fraud', 'cheating']
+    
+    # Determine category
+    is_violent = any(vc in crime_lower for vc in violent_crimes)
+    is_property = any(pc in crime_lower for pc in property_crimes)
+    is_traffic = any(tc in crime_lower for tc in traffic_crimes)
+    is_cyber = any(cc in crime_lower for cc in cyber_crimes)
+    
+    # Severity level based on crime rate
+    if crime_rate > 20:
+        severity = "Critical"
+    elif crime_rate > 15:
+        severity = "High"
+    elif crime_rate > 8:
+        severity = "Moderate"
+    else:
+        severity = "Low"
+    
+    recommendations = {
+        "severity": severity,
+        "crime_category": "",
+        "personnel": [],
+        "infrastructure": [],
+        "technology": [],
+        "community_programs": [],
+        "budget_priority": "",
+        "estimated_budget_increase": "",
+        "implementation_timeline": ""
+    }
+    
+    # ─── VIOLENT CRIMES RECOMMENDATIONS ───
+    if is_violent:
+        recommendations["crime_category"] = "Violent Crime"
+        
+        if severity in ["Critical", "High"]:
+            # Personnel
+            current_officers = int(population_lakh * 100 * 1.5)  # Assume ~150 officers per lakh
+            recommended_increase = int(current_officers * 0.20)  # 20% increase
+            recommendations["personnel"] = [
+                f"Deploy {recommended_increase} additional police officers (20% increase)",
+                f"Increase police-to-population ratio to 200 per lakh (current ~150)",
+                "Create specialized violent crime response units (50-75 officers)",
+                "Deploy 15-20 rapid response vehicles",
+                "Establish 24/7 emergency helpline with 30+ operators"
+            ]
+            
+            # Infrastructure
+            recommendations["infrastructure"] = [
+                f"Install {int(population_lakh * 50)} CCTV cameras in high-risk areas",
+                "Set up 5-8 new police checkpoints in crime hotspots",
+                "Establish 2-3 temporary police outposts in vulnerable zones",
+                "Improve lighting infrastructure at 100+ dark spots",
+                "Build 1-2 fast-track courts for expedited trials"
+            ]
+            
+            # Technology
+            recommendations["technology"] = [
+                "Deploy AI-powered crime prediction analytics",
+                "Implement facial recognition at 50+ strategic locations",
+                "Set up real-time CCTV monitoring control room",
+                "GPS tracking for all patrol vehicles",
+                "Mobile panic buttons for vulnerable populations"
+            ]
+            
+            # Community
+            recommendations["community_programs"] = [
+                "Launch 'Safe City' awareness campaign (₹20-30 lakh budget)",
+                "Establish 20+ neighborhood watch groups",
+                "Women's safety workshops in 50+ communities",
+                "Youth engagement programs to prevent crime"
+            ]
+            
+            recommendations["budget_priority"] = "URGENT - High Priority Allocation Required"
+            recommendations["estimated_budget_increase"] = f"₹{int(population_lakh * 15)}-{int(population_lakh * 25)} Crore annually"
+            recommendations["implementation_timeline"] = "Immediate deployment (0-3 months)"
+            
+        else:  # Moderate/Low severity
+            recommendations["personnel"] = [
+                "Maintain current staffing with enhanced training",
+                f"Add {int(population_lakh * 10)} officers for preventive patrolling",
+                "Rotate officers to high-risk shifts (6 PM - 2 AM)"
+            ]
+            recommendations["infrastructure"] = [
+                f"Install {int(population_lakh * 25)} CCTV cameras strategically",
+                "Strengthen lighting at 50+ identified dark spots"
+            ]
+            recommendations["technology"] = [
+                "Upgrade communication systems for officers",
+                "Implement crime mapping software"
+            ]
+            recommendations["community_programs"] = [
+                "Quarterly safety awareness campaigns",
+                "Community policing initiatives"
+            ]
+            recommendations["budget_priority"] = "Medium Priority"
+            recommendations["estimated_budget_increase"] = f"₹{int(population_lakh * 5)}-{int(population_lakh * 10)} Crore annually"
+            recommendations["implementation_timeline"] = "Phased rollout (3-6 months)"
+    
+    # ─── TRAFFIC CRIMES RECOMMENDATIONS ───
+    elif is_traffic:
+        recommendations["crime_category"] = "Traffic & Road Safety"
+        
+        if severity in ["Critical", "High"]:
+            recommendations["personnel"] = [
+                f"Deploy {int(population_lakh * 8)} additional traffic enforcement officers",
+                "Increase traffic police at 50+ accident-prone intersections",
+                "24/7 emergency response teams at highways",
+                "Mobile traffic courts for on-spot challan processing"
+            ]
+            
+            recommendations["infrastructure"] = [
+                f"Install {int(population_lakh * 30)} speed monitoring cameras",
+                "Set up 20-30 red-light violation cameras",
+                "Install crash barriers at 100+ dangerous curves",
+                "Improve road signage at 200+ locations",
+                "Build 5-10 pedestrian overpasses/underpasses",
+                "Repair potholes and resurface 50+ km of roads"
+            ]
+            
+            recommendations["technology"] = [
+                "AI-powered license plate recognition system",
+                "Automated speed enforcement at 50+ zones",
+                "Real-time traffic monitoring dashboard",
+                "Mobile app for reporting road hazards",
+                "Integration with ambulance dispatch system"
+            ]
+            
+            recommendations["community_programs"] = [
+                "Mandatory road safety education in schools",
+                "Public awareness campaigns on drunk driving",
+                "Free helmet distribution program (10,000+ units)",
+                "Defensive driving workshops"
+            ]
+            
+            recommendations["budget_priority"] = "HIGH - Road Safety Critical"
+            recommendations["estimated_budget_increase"] = f"₹{int(population_lakh * 12)}-{int(population_lakh * 20)} Crore annually"
+            recommendations["implementation_timeline"] = "Emergency deployment (0-6 months)"
+        else:
+            recommendations["personnel"] = [
+                "Strategic deployment during peak hours (7-10 AM, 5-9 PM)",
+                f"Add {int(population_lakh * 3)} traffic officers"
+            ]
+            recommendations["infrastructure"] = [
+                f"Install {int(population_lakh * 15)} speed cameras",
+                "Improve signage at 50+ locations"
+            ]
+            recommendations["technology"] = [
+                "Speed monitoring systems",
+                "Digital challan system"
+            ]
+            recommendations["community_programs"] = [
+                "Quarterly road safety campaigns",
+                "School awareness programs"
+            ]
+            recommendations["budget_priority"] = "Medium Priority"
+            recommendations["estimated_budget_increase"] = f"₹{int(population_lakh * 4)}-{int(population_lakh * 8)} Crore annually"
+            recommendations["implementation_timeline"] = "6-12 months"
+    
+    # ─── PROPERTY CRIMES RECOMMENDATIONS ───
+    elif is_property:
+        recommendations["crime_category"] = "Property Crime"
+        
+        if severity in ["Critical", "High"]:
+            recommendations["personnel"] = [
+                f"Deploy {int(population_lakh * 12)} additional patrol officers",
+                "Establish anti-theft squads (30-40 officers)",
+                "Increase night patrol frequency by 50%",
+                "Create dedicated investigation team for property crimes"
+            ]
+            
+            recommendations["infrastructure"] = [
+                f"Install {int(population_lakh * 60)} CCTV cameras in residential areas",
+                "Set up RFID-based vehicle tracking at entry/exit points",
+                "Improve street lighting in 150+ areas",
+                "Deploy alarm systems at public facilities"
+            ]
+            
+            recommendations["technology"] = [
+                "Stolen property tracking database",
+                "CCTV network integration across the city",
+                "Mobile alert system for residents",
+                "License plate recognition at 30+ locations"
+            ]
+            
+            recommendations["community_programs"] = [
+                "Neighborhood security awareness (100+ sessions)",
+                "Property marking initiative (10,000+ households)",
+                "Community alert networks via mobile apps"
+            ]
+            
+            recommendations["budget_priority"] = "High Priority"
+            recommendations["estimated_budget_increase"] = f"₹{int(population_lakh * 10)}-{int(population_lakh * 18)} Crore annually"
+            recommendations["implementation_timeline"] = "3-6 months"
+        else:
+            recommendations["personnel"] = [
+                "Optimize patrol routes based on crime hotspot data",
+                f"Add {int(population_lakh * 5)} officers for night shift"
+            ]
+            recommendations["infrastructure"] = [
+                f"Install {int(population_lakh * 30)} CCTV cameras",
+                "Lighting improvements at 50+ locations"
+            ]
+            recommendations["technology"] = [
+                "Property registration database",
+                "Basic CCTV monitoring system"
+            ]
+            recommendations["community_programs"] = [
+                "Basic security awareness campaigns",
+                "Neighborhood watch programs"
+            ]
+            recommendations["budget_priority"] = "Medium Priority"
+            recommendations["estimated_budget_increase"] = f"₹{int(population_lakh * 3)}-{int(population_lakh * 7)} Crore annually"
+            recommendations["implementation_timeline"] = "6-12 months"
+    
+    # ─── CYBER CRIMES RECOMMENDATIONS ───
+    elif is_cyber:
+        recommendations["crime_category"] = "Cyber Crime"
+        
+        recommendations["personnel"] = [
+            "Create cyber crime cell with 20-30 specialized officers",
+            "Train 50+ officers in digital forensics",
+            "Establish 24/7 cyber helpline"
+        ]
+        
+        recommendations["infrastructure"] = [
+            "Set up state-of-the-art cyber forensics lab",
+            "Establish cyber awareness centers"
+        ]
+        
+        recommendations["technology"] = [
+            "Advanced malware analysis tools",
+            "Digital evidence management system",
+            "AI-powered fraud detection",
+            "Online complaint portal with chatbot support"
+        ]
+        
+        recommendations["community_programs"] = [
+            "Cyber hygiene workshops for 10,000+ citizens",
+            "Senior citizen awareness (financial fraud prevention)",
+            "Student education programs in 100+ schools"
+        ]
+        
+        recommendations["budget_priority"] = "Medium-High Priority"
+        recommendations["estimated_budget_increase"] = f"₹{int(population_lakh * 2)}-{int(population_lakh * 5)} Crore annually"
+        recommendations["implementation_timeline"] = "6-9 months"
+    
+    # ─── GENERAL/OTHER CRIMES ───
+    else:
+        recommendations["crime_category"] = "General Crime"
+        recommendations["personnel"] = [
+            f"Standard deployment: {int(population_lakh * 150)} officers",
+            "Balanced shift rotation across all areas"
+        ]
+        recommendations["infrastructure"] = [
+            f"Maintain {int(population_lakh * 40)} CCTV cameras",
+            "Regular infrastructure maintenance"
+        ]
+        recommendations["technology"] = [
+            "Basic crime management system",
+            "Public complaint portal"
+        ]
+        recommendations["community_programs"] = [
+            "General awareness campaigns",
+            "Community policing programs"
+        ]
+        recommendations["budget_priority"] = "Standard Allocation"
+        recommendations["estimated_budget_increase"] = f"₹{int(population_lakh * 3)}-{int(population_lakh * 6)} Crore annually"
+        recommendations["implementation_timeline"] = "Annual planning cycle"
+    
+    return recommendations
+
+
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.route('/api/cities')
@@ -357,6 +659,80 @@ def predict():
                                   base_total_crimes=base_total_crimes, years=5)
     graph_b64 = _make_chart(trend)
 
+    # ── Crime Early Warning System ─────────────────────────────────────────────
+    # STEP 1: Compute Growth Metrics
+    try:
+        current_rate = crime_rate
+        next_year_rate = trend[1]["pred"]
+        growth_rate = (next_year_rate - current_rate) / current_rate
+        
+        second_year_growth = 0
+        if len(trend) > 2:
+            second_year_growth = (trend[2]["pred"] - trend[1]["pred"]) / trend[1]["pred"]
+    except (IndexError, ZeroDivisionError, KeyError):
+        growth_rate = 0
+        second_year_growth = 0
+
+    # STEP 2: Define Alert Threshold Framework
+    if current_rate > 20 or growth_rate > 0.20:
+        alert_level = "Critical"
+    elif current_rate > 15 or growth_rate > 0.10:
+        alert_level = "High"
+    elif growth_rate > 0.05:
+        alert_level = "Escalating"
+    else:
+        alert_level = "Stable"
+
+    # Escalation condition
+    if second_year_growth > growth_rate and alert_level != "Critical":
+        if alert_level == "Stable": alert_level = "Escalating"
+        elif alert_level == "Escalating": alert_level = "High"
+        elif alert_level == "High": alert_level = "Critical"
+
+    # STEP 3: Government Policy Mapping
+    policy_list = []
+    if alert_level == "Critical":
+        policy_list = [
+            "Immediate intervention required",
+            "Activate emergency crime control task force",
+            "Increase patrol deployment by 15–20%",
+            "Allocate special enforcement budget",
+            "Initiate inter-agency coordination"
+        ]
+    elif alert_level == "High":
+        policy_list = [
+            "Increase patrol density in high-risk areas",
+            "Expand surveillance infrastructure",
+            "Conduct weekly risk monitoring review"
+        ]
+    elif alert_level == "Escalating":
+        policy_list = [
+            "Increase intelligence-based patrol planning",
+            "Enhance data-driven enforcement review"
+        ]
+    else:
+        policy_list = [
+            "Maintain routine monitoring and quarterly review"
+        ]
+
+    # STEP 4: Add Structured Response
+    early_warning = {
+        "level": alert_level,
+        "growth_rate_percent": round(growth_rate * 100, 2),
+        "classification_basis": "Rate and growth threshold evaluation",
+        "recommended_actions": policy_list
+    }
+    
+    # ── Resource Allocation Recommendation Engine (MAJOR USP) ────────────────────
+    # Generate comprehensive resource allocation recommendations
+    resource_allocation = _resource_allocation_recommendations(
+        crime_type=crime_type,
+        crime_rate=crime_rate,
+        city=city_display,
+        population_lakh=pop_lakh
+    )
+    # ───────────────────────────────────────────────────────────────────────────
+
     # Task 3: log with crime_type always present
     notes = {'warnings': warnings, 'crime_type': crime_type, 'reliable': reliable}
     if missing_crime_type:
@@ -396,6 +772,8 @@ def predict():
         'trend':    trend,
         'graph':    graph_b64,
         'policies': _policies(crime_rate),
+        'early_warning': early_warning,
+        'resource_allocation': resource_allocation,
     })
 
 
@@ -511,8 +889,7 @@ def heatmap():
         lat, lng   = CITY_COORDS.get(canonical, (20.5937, 78.9629))
 
         try:
-            df_row, _ = validate_and_prepare({'city': canonical, 'year': year}, _meta)
-            mean, std, confidence, _ = predict_with_uncertainty(df_row.iloc[0].to_dict())
+            mean, std, confidence, _ = get_prediction_cached(canonical, year)
         except Exception:
             continue
 
@@ -580,8 +957,7 @@ def city_analysis():
             return jsonify({'error': str(ve)}), 422
 
     try:
-        df_row, _ = validate_and_prepare({'city': city_canonical, 'year': year}, _meta)
-        mean, _, _, _ = predict_with_uncertainty(df_row.iloc[0].to_dict())
+        mean, _, _, _ = get_prediction_cached(city_canonical, year)
         rate = round(float(mean), 2)
         return jsonify({
             'city':           city_display,

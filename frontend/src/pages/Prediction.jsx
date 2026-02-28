@@ -616,6 +616,131 @@ export default function Prediction() {
                   </div>
                 </div>
 
+                {/* 🟡 RESOURCE ALLOCATION RECOMMENDATION ENGINE */}
+                {result.resource_allocation && (
+                  <div className="mt-8 rounded-2xl p-8 shadow-2xl"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(15,23,42,0.95) 100%)',
+                      border: '2px solid rgba(99,102,241,0.35)'
+                    }}>
+
+                    {/* Header */}
+                    <div className="flex justify-between items-start mb-8 pb-6 border-b border-slate-800">
+                      <div>
+                        <div className="text-xl font-bold text-white flex items-center gap-3 mb-2">
+                          <Shield className="text-indigo-400" size={22} />
+                          🟡 Strategic Resource Allocation Engine
+                        </div>
+                        <div className="text-sm text-slate-400">
+                          Government Budget Planning · Manpower Distribution · Infrastructure Investment
+                        </div>
+                      </div>
+                      <span className="px-4 py-2 rounded-xl text-sm font-bold border"
+                        style={{
+                          background: result.resource_allocation.severity === 'Critical' ? 'rgba(231,76,60,0.2)' :
+                                      result.resource_allocation.severity === 'High' ? 'rgba(230,126,34,0.2)' :
+                                      result.resource_allocation.severity === 'Moderate' ? 'rgba(243,156,18,0.2)' : 'rgba(46,204,113,0.2)',
+                          borderColor: result.resource_allocation.severity === 'Critical' ? '#e74c3c' :
+                                       result.resource_allocation.severity === 'High' ? '#e67e22' :
+                                       result.resource_allocation.severity === 'Moderate' ? '#f39c12' : '#2ecc71',
+                          color: result.resource_allocation.severity === 'Critical' ? '#e74c3c' :
+                                 result.resource_allocation.severity === 'High' ? '#e67e22' :
+                                 result.resource_allocation.severity === 'Moderate' ? '#f39c12' : '#2ecc71',
+                        }}>
+                        {result.resource_allocation.severity} Severity
+                      </span>
+                    </div>
+
+                    {/* 4 Key Metric Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                      <div className="bg-indigo-500/10 border border-indigo-500/25 rounded-xl p-4">
+                        <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Crime Category</div>
+                        <div className="text-base font-bold text-indigo-400">{result.resource_allocation.crime_category}</div>
+                      </div>
+                      <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-4">
+                        <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Budget Priority</div>
+                        <div className="text-base font-bold text-amber-400 leading-snug">{result.resource_allocation.budget_priority}</div>
+                      </div>
+                      <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-xl p-4">
+                        <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Est. Budget Needed</div>
+                        <div className="text-base font-bold text-emerald-400">{result.resource_allocation.estimated_budget_increase}</div>
+                      </div>
+                      <div className="bg-sky-500/10 border border-sky-500/25 rounded-xl p-4">
+                        <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Timeline</div>
+                        <div className="text-base font-bold text-sky-400">{result.resource_allocation.implementation_timeline}</div>
+                      </div>
+                    </div>
+
+                    {/* 4 Recommendation Sections */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {result.resource_allocation.personnel?.length > 0 && (
+                        <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-6">
+                          <div className="text-sm font-bold text-indigo-400 mb-4 flex items-center gap-2">
+                            👮 PERSONNEL DEPLOYMENT
+                          </div>
+                          <ul className="space-y-2">
+                            {result.resource_allocation.personnel.map((item, i) => (
+                              <li key={i} className="flex items-start gap-3 text-sm text-slate-300">
+                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {result.resource_allocation.infrastructure?.length > 0 && (
+                        <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-6">
+                          <div className="text-sm font-bold text-amber-400 mb-4 flex items-center gap-2">
+                            🏗️ INFRASTRUCTURE
+                          </div>
+                          <ul className="space-y-2">
+                            {result.resource_allocation.infrastructure.map((item, i) => (
+                              <li key={i} className="flex items-start gap-3 text-sm text-slate-300">
+                                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {result.resource_allocation.technology?.length > 0 && (
+                        <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-6">
+                          <div className="text-sm font-bold text-emerald-400 mb-4 flex items-center gap-2">
+                            💻 TECHNOLOGY & SYSTEMS
+                          </div>
+                          <ul className="space-y-2">
+                            {result.resource_allocation.technology.map((item, i) => (
+                              <li key={i} className="flex items-start gap-3 text-sm text-slate-300">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {result.resource_allocation.community_programs?.length > 0 && (
+                        <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-6">
+                          <div className="text-sm font-bold text-amber-300 mb-4 flex items-center gap-2">
+                            🤝 COMMUNITY PROGRAMS
+                          </div>
+                          <ul className="space-y-2">
+                            {result.resource_allocation.community_programs.map((item, i) => (
+                              <li key={i} className="flex items-start gap-3 text-sm text-slate-300">
+                                <div className="w-1.5 h-1.5 rounded-full bg-amber-300 mt-2 shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-6 text-center text-xs text-slate-500 border-t border-slate-800 pt-4">
+                      <strong className="text-indigo-400">🟡 MAJOR USP:</strong> AI-Powered Resource Allocation Engine for Government Decision-Making
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-12 flex items-center justify-center gap-4">
                   <button
                     className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-medium transition-all shadow-lg flex items-center gap-2"
