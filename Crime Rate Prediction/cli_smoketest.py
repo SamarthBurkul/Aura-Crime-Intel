@@ -2,12 +2,14 @@
 """
 cli_smoketest.py
 ----------------
-Reads JSON from stdin, runs predict_with_uncertainty, and prints the result.
-Useful for CI / quick checks without starting the Flask server.
+Reads JSON from stdin, runs predict_with_uncertainty, prints the result.
+
+Task 3 fix: crime_type now defaults to "unknown" if absent from input,
+and notes["logged_by_cli_missing_type"] is set to True in that case.
 
 Usage:
     echo '{"city": "Mumbai", "year": 2025}' | python cli_smoketest.py
-    cat sample_input.json | python cli_smoketest.py
+    echo '{"city": "Mumbai", "year": 2025, "crime_type": "Murder"}' | python cli_smoketest.py
 """
 
 import sys
@@ -57,10 +59,25 @@ def main():
     try:
         mean, std, conf, ver = predict_with_uncertainty(df_row.iloc[0].to_dict())
     except Exception as e:
-        print(json.dumps({"error": f"Inference failed: {e}", "trace": traceback.format_exc()}))
+        print(json.dumps({"error": f"Inference failed: {e}",
+                          "trace": traceback.format_exc()}))
         sys.exit(1)
 
+    # Task 3: resolve crime_type; flag if missing
+    crime_type = input_dict.get("crime_type") or input_dict.get("crimeType") or None
+    missing_crime_type = (crime_type is None or str(crime_type).strip() == "")
+    if missing_crime_type:
+        crime_type = "unknown"
+
     init_db()
+    notes = {
+        "warnings":   warnings,
+        "crime_type": crime_type,
+        "source":     "cli_smoketest",
+    }
+    if missing_crime_type:
+        notes["logged_by_cli_missing_type"] = True
+
     log_id = log_prediction(
         city=str(df_row.iloc[0]["City"]),
         year=int(df_row.iloc[0]["Year"]),
@@ -69,7 +86,7 @@ def main():
         pred_std=std,
         confidence=conf,
         model_version=ver,
-        notes={"warnings": warnings, "source": "cli_smoketest"},
+        notes=notes,
     )
 
     result = {
@@ -83,6 +100,8 @@ def main():
         "population":           float(df_row.iloc[0]["Population"]),
         "population_estimated": df_row.attrs.get("population_estimated", False),
         "population_method":    df_row.attrs.get("population_method", "provided"),
+        "crime_type":           crime_type,
+        "missing_crime_type":   missing_crime_type,
         "warning":              "; ".join(warnings) if warnings else None,
         "log_id":               log_id,
     }

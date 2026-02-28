@@ -1,7 +1,26 @@
 """
 predict_utils.py
 ----------------
-Utilities for input normalization, population lookup, and row preparation.
+Utilities for input normalization, population lookup, row preparation,
+crime-category breakdown, and 5-year rate projection.
+
+New in this revision
+--------------------
+* get_crime_breakdown(city, year, predicted_cases)
+      -> dict {category: {share_pct, estimated_cases}}
+      Computes each sub-category's historical share from df_merged.csv.
+      Purely informational — not used by the model.
+
+* project_future_rates(city, base_year, base_total_crimes, years=5)
+      -> list [{year, pred, growth_factor, projected}]
+      Median YoY growth from last ≤3 years; falls back to g=0.01.
+
+Assumptions
+-----------
+- df_merged.csv columns: City, Year, Population, Total Crimes,
+  Assault, Burglary, Homicide, Other Crimes, Robbery, Theft,
+  Crime Rate Per 100K
+- Population is in raw units (e.g. 18,410,000).
 """
 
 import os
@@ -18,15 +37,21 @@ _crp_df:    Optional[pd.DataFrame] = None
 
 MEDIAN_POPULATION = 1_800_000
 
+# Sub-category columns that exist in df_merged.csv
+BREAKDOWN_COLS = ["Assault", "Burglary", "Homicide", "Other Crimes", "Robbery", "Theft"]
 
-def _load_merged():
+# Conservative fallback annual growth rate when no history exists
+FALLBACK_GROWTH = 0.01
+
+
+def _load_merged() -> Optional[pd.DataFrame]:
     global _df_merged
     if _df_merged is None and os.path.exists(DATA_PATH):
         _df_merged = pd.read_csv(DATA_PATH)
     return _df_merged
 
 
-def _load_crp():
+def _load_crp() -> Optional[pd.DataFrame]:
     global _crp_df
     if _crp_df is None and os.path.exists(CRP_PATH):
         try:
@@ -60,13 +85,14 @@ def normalize_city(name: str, meta: Dict) -> Tuple[Optional[str], Optional[str]]
     city_list: List[str] = [c.replace("City_", "") for c in meta.get("city_mappings", [])]
     name_lower = name.strip().lower()
 
-    # 1. Exact match
+    # 1. Exact match (case-insensitive)
     for city in city_list:
         if city.lower() == name_lower:
             return city, None
 
     # 2. Substring match
-    substring_matches = [c for c in city_list if name_lower in c.lower() or c.lower() in name_lower]
+    substring_matches = [c for c in city_list
+                         if name_lower in c.lower() or c.lower() in name_lower]
     if len(substring_matches) == 1:
         return substring_matches[0], f"city mapped to {substring_matches[0]} (substring match)"
     if len(substring_matches) > 1:
@@ -76,16 +102,21 @@ def normalize_city(name: str, meta: Dict) -> Tuple[Optional[str], Optional[str]]
     # 3. Edit-distance ≤ 2
     close = sorted([(c, _levenshtein(name, c)) for c in city_list], key=lambda x: x[1])
     if close and close[0][1] <= 2:
-        return close[0][0], f"city mapped to {close[0][0]} (fuzzy match, edit-distance={close[0][1]})"
+        return close[0][0], (
+            f"city mapped to {close[0][0]} "
+            f"(fuzzy match, edit-distance={close[0][1]})"
+        )
 
-    # 4. No match
+    # 4. No match — recommend from reliable_cities
     reliable: List[str] = meta.get("reliable_cities", city_list)
     recommended = sorted(reliable, key=lambda c: _levenshtein(name, c))[:3]
     return None, json.dumps({"city_not_supported": True, "recommended_cities": recommended})
 
 
 def get_population(city: str, year: int) -> Tuple[float, str]:
-    """Returns (population, method) — tries df_merged → crp.xlsx → median."""
+    """Returns (population_raw, method).
+    Priority: df_merged exact → interpolated → crp.xlsx → median fallback.
+    """
     df = _load_merged()
 
     if df is not None and "City" in df.columns and "Population" in df.columns:
@@ -126,10 +157,8 @@ def validate_and_prepare(
     meta: Dict
 ) -> Tuple[pd.DataFrame, List[str]]:
     """
-    Validate user input and construct a model-ready DataFrame row.
-
-    Required: city, year
-    Optional: population, assault, burglary, homicide, other_crimes, robbery, theft
+    Validate input and return a model-ready single-row DataFrame.
+    Required: city, year.  Optional: population, sub-crime counts.
     """
     warnings: List[str] = []
 
@@ -178,7 +207,7 @@ def validate_and_prepare(
         if population <= 0:
             raise ValueError("'population' must be positive")
 
-    # -- crime sub-features --
+    # -- crime sub-features (use df_merged baselines if not provided) --
     df = _load_merged()
 
     def _get_baseline(col: str, key: str) -> float:
@@ -211,3 +240,103 @@ def validate_and_prepare(
         df_row.attrs["population_method"]    = pop_method
 
     return df_row, warnings
+
+
+# ── NEW: Informational crime-category breakdown ───────────────────────────────
+def get_crime_breakdown(
+    city: str,
+    year: int,
+    predicted_cases: int
+) -> Dict[str, Dict]:
+    """
+    Return each sub-category's historical share (%) and estimated future cases.
+
+    Uses the most-recent historical row with Year ≤ requested year.
+    Returns {} if data unavailable (caller should omit the panel).
+    """
+    df = _load_merged()
+    if df is None:
+        return {}
+
+    city_df = df[df["City"].str.lower() == city.lower()]
+    if city_df.empty:
+        return {}
+
+    # Use rows at or before the target year; fall back to all rows if none match
+    historical = city_df[city_df["Year"] <= year]
+    if historical.empty:
+        historical = city_df
+
+    base_row = historical.sort_values("Year").iloc[-1]
+
+    # Only include columns that are present and numeric
+    available_cols = [
+        c for c in BREAKDOWN_COLS
+        if c in base_row.index and pd.notna(base_row[c])
+    ]
+    if not available_cols:
+        return {}
+
+    total_sub = sum(float(base_row[c]) for c in available_cols)
+    if total_sub <= 0:
+        return {}
+
+    breakdown: Dict[str, Dict] = {}
+    for col in available_cols:
+        share = float(base_row[col]) / total_sub * 100
+        est   = round(predicted_cases * share / 100)
+        breakdown[col] = {
+            "share_pct":       round(share, 1),
+            "estimated_cases": int(est),
+        }
+
+    return breakdown
+
+
+# ── NEW: 5-year projection helper ─────────────────────────────────────────────
+def project_future_rates(
+    city: str,
+    base_year: int,
+    base_total_crimes: float,
+    years: int = 5
+) -> List[Dict]:
+    """
+    Project crime rates for the next `years` years.
+
+    Logic
+    -----
+    1. Compute YoY growth rates from df_merged.csv (pct_change on Total Crimes).
+    2. Take median of the last ≤3 such rates for this city.
+    3. Clamp to [-0.30, +0.30] to prevent runaway projections.
+    4. Fall back to FALLBACK_GROWTH (1%) if fewer than 2 years of history.
+    5. Project: crimes_y = base * (1+g)^delta, rate = crimes_y / (pop_y/1e5).
+
+    Returns list of {year, pred, growth_factor, projected=True}.
+    """
+    df = _load_merged()
+    growth_factor = FALLBACK_GROWTH
+
+    if df is not None and "Total Crimes" in df.columns:
+        city_df = df[df["City"].str.lower() == city.lower()].sort_values("Year")
+        if len(city_df) >= 2:
+            yoy = city_df["Total Crimes"].pct_change().dropna().tail(3).values
+            if len(yoy) > 0:
+                g = float(np.median(yoy))
+                growth_factor = max(-0.30, min(g, 0.30))  # clamp
+
+    projections = []
+    for d in range(1, years + 1):
+        future_year   = base_year + d
+        proj_crimes   = max(base_total_crimes * ((1 + growth_factor) ** d), 0)
+        future_pop, _ = get_population(city, future_year)
+        future_pop    = max(future_pop, 1)
+        rate_per_100k = (proj_crimes / future_pop) * 100_000
+
+        projections.append({
+            "year":          future_year,
+            "pred":          round(rate_per_100k, 2),
+            "growth_factor": round(growth_factor, 4),
+            "projected":     True,
+        })
+
+    return projections
