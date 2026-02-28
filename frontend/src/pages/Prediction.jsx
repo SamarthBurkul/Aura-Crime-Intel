@@ -279,7 +279,54 @@ export default function Prediction() {
                         onChange={(e) => setSelectedCrime(e.target.value)}
                         className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-xl px-4 py-3 appearance-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                         required
-                      >
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   >
                         <option value="" disabled hidden>Select Crime Type...</option>
                         {crimes.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                       </select>
@@ -448,7 +495,7 @@ export default function Prediction() {
                   </div>
                   <div className="h-[280px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={result.trend} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                      <LineChart data={[{ year: result.year, pred: result.primary.crimeRate }, ...result.trend]} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                         <XAxis dataKey="year" tick={{ fill: '#8888aa', fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} dy={10} />
                         <YAxis tick={{ fill: '#8888aa', fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} />
