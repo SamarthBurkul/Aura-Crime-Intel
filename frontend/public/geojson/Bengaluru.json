@@ -1,0 +1,236 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "North Zone"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            77.55,
+                            13.02
+                        ],
+                        [
+                            77.64,
+                            13.02
+                        ],
+                        [
+                            77.64,
+                            13.10
+                        ],
+                        [
+                            77.55,
+                            13.10
+                        ],
+                        [
+                            77.55,
+                            13.02
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "East Zone"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            77.62,
+                            12.95
+                        ],
+                        [
+                            77.72,
+                            12.95
+                        ],
+                        [
+                            77.72,
+                            13.03
+                        ],
+                        [
+                            77.62,
+                            13.03
+                        ],
+                        [
+                            77.62,
+                            12.95
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "West Zone"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            77.49,
+                            12.94
+                        ],
+                        [
+                            77.58,
+                            12.94
+                        ],
+                        [
+                            77.58,
+                            13.02
+                        ],
+                        [
+                            77.49,
+                            13.02
+                        ],
+                        [
+                            77.49,
+                            12.94
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "South Zone"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            77.55,
+                            12.84
+                        ],
+                        [
+                            77.64,
+                            12.84
+                        ],
+                        [
+                            77.64,
+                            12.93
+                        ],
+                        [
+                            77.55,
+                            12.93
+                        ],
+                        [
+                            77.55,
+                            12.84
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Mahadevapura"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            77.65,
+                            12.97
+                        ],
+                        [
+                            77.74,
+                            12.97
+                        ],
+                        [
+                            77.74,
+                            13.04
+                        ],
+                        [
+                            77.65,
+                            13.04
+                        ],
+                        [
+                            77.65,
+                            12.97
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Bommanahalli"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            77.61,
+                            12.87
+                        ],
+                        [
+                            77.69,
+                            12.87
+                        ],
+                        [
+                            77.69,
+                            12.94
+                        ],
+                        [
+                            77.61,
+                            12.94
+                        ],
+                        [
+                            77.61,
+                            12.87
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Yelahanka"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            77.55,
+                            13.08
+                        ],
+                        [
+                            77.64,
+                            13.08
+                        ],
+                        [
+                            77.64,
+                            13.16
+                        ],
+                        [
+                            77.55,
+                            13.16
+                        ],
+                        [
+                            77.55,
+                            13.08
+                        ]
+                    ]
+                ]
+            }
+        }
+    ]
+}

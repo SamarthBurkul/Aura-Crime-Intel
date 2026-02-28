@@ -1,0 +1,203 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Walled City"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            75.80,
+                            26.90
+                        ],
+                        [
+                            75.86,
+                            26.90
+                        ],
+                        [
+                            75.86,
+                            26.95
+                        ],
+                        [
+                            75.80,
+                            26.95
+                        ],
+                        [
+                            75.80,
+                            26.90
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Civil Lines"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            75.77,
+                            26.89
+                        ],
+                        [
+                            75.82,
+                            26.89
+                        ],
+                        [
+                            75.82,
+                            26.93
+                        ],
+                        [
+                            75.77,
+                            26.93
+                        ],
+                        [
+                            75.77,
+                            26.89
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Vaishali"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            75.74,
+                            26.90
+                        ],
+                        [
+                            75.79,
+                            26.90
+                        ],
+                        [
+                            75.79,
+                            26.95
+                        ],
+                        [
+                            75.74,
+                            26.95
+                        ],
+                        [
+                            75.74,
+                            26.90
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Mansarovar"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            75.74,
+                            26.83
+                        ],
+                        [
+                            75.79,
+                            26.83
+                        ],
+                        [
+                            75.79,
+                            26.88
+                        ],
+                        [
+                            75.74,
+                            26.88
+                        ],
+                        [
+                            75.74,
+                            26.83
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Malviya Nagar"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            75.80,
+                            26.83
+                        ],
+                        [
+                            75.85,
+                            26.83
+                        ],
+                        [
+                            75.85,
+                            26.88
+                        ],
+                        [
+                            75.80,
+                            26.88
+                        ],
+                        [
+                            75.80,
+                            26.83
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Sanganer"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            75.80,
+                            26.76
+                        ],
+                        [
+                            75.86,
+                            26.76
+                        ],
+                        [
+                            75.86,
+                            26.82
+                        ],
+                        [
+                            75.80,
+                            26.82
+                        ],
+                        [
+                            75.80,
+                            26.76
+                        ]
+                    ]
+                ]
+            }
+        }
+    ]
+}
