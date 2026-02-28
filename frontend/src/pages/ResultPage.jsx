@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts'
-import { ArrowLeft, AlertTriangle, CheckCircle, Info } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, CheckCircle, Info, Shield } from 'lucide-react'
 
 function StatusDot({ status }) {
     const colors = { 'Very Low': '#2ecc71', Low: '#f1c40f', High: '#e67e22', 'Very High': '#e74c3c' }
@@ -44,7 +44,7 @@ export default function ResultPage({ result }) {
         )
     }
 
-    const { city, crimeType, year, primary, alternate, trend, policies, modelUsed, reliable } = result
+    const { city, crimeType, year, primary, trend, policies, reliable } = result
     const statusColors = { 'Very Low': '#2ecc71', Low: '#f1c40f', High: '#e67e22', 'Very High': '#e74c3c' }
     const sColor = statusColors[primary.status] || '#888'
 
@@ -59,75 +59,81 @@ export default function ResultPage({ result }) {
             {/* ── HEADER ── */}
             <div className="result-header">
                 <div className="result-title">{city} · {crimeType}</div>
-                <div className="result-meta">Predicted for year {year}{reliable ? ' · ✅ Reliable City' : ''} · {modelUsed === 'v3_combined' ? 'V3 Combined (400 trees)' : 'V1 Fallback'}</div>
+                <div className="result-meta">
+                    Predicted for year {year} · V3 Combined (400 trees · R² 92.15%)
+                    {reliable && <span style={{ marginLeft: 8, color: '#2ecc71', fontWeight: 600 }}>✅ Reliable City</span>}
+                </div>
             </div>
 
-            {/* ── PRIMARY + ALTERNATE SIDE BY SIDE ── */}
-            <div className="result-grid">
+            {/* ── MAIN PREDICTION CARD (full width) ── */}
+            <div className="primary-card" style={{ maxWidth: '100%' }}>
+                {/* Top row: label + confidence */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div className="primary-label">V3 Combined Model · Total Crime Rate</div>
+                    <ConfBadge confidence={primary.confidence} />
+                </div>
 
-                {/* PRIMARY */}
-                <div className="primary-card">
-                    <div className="primary-label">{modelUsed === 'v3_combined' ? 'V3 Combined · R² 92.15% · 400 Trees' : 'V1 Original · R² 93.2%'}</div>
-                    <div className="crime-rate-big" style={{ color: sColor }}>
-                        {primary.crimeRate}
-                    </div>
-                    <div style={{ color: 'var(--muted)', fontSize: 13 }}>{modelUsed === 'v3_combined' ? 'total crimes per lakh population' : 'crimes per lakh population'}</div>
-                    <div className="status-badge" style={{ background: `${sColor}20`, color: sColor, border: `1px solid ${sColor}40` }}>
-                        <StatusDot status={primary.status} />
-                        {primary.status} Crime Area
-                    </div>
+                {/* Big number */}
+                <div className="crime-rate-big" style={{ color: sColor }}>
+                    {primary.crimeRate}
+                </div>
+                <div style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 12 }}>
+                    total crimes per lakh population
+                    {primary.std != null && (
+                        <span style={{ marginLeft: 10, color: '#8888aa' }}>
+                            · Uncertainty: ±{primary.std} across 400 trees
+                        </span>
+                    )}
+                </div>
 
-                    <div className="meta-rows">
-                        <div className="meta-row"><span className="meta-key">Est. Cases</span><span>{primary.cases.toLocaleString()}</span></div>
-                        <div className="meta-row"><span className="meta-key">Population (Lakhs)</span><span>{primary.population}</span></div>
-                        <div className="meta-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-                            <span className="meta-key">Severity</span>
-                            <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: 12 }}>
-                                <div className="severity-bar-bg">
-                                    <div className="severity-bar-fill" style={{ width: `${severityAnim}%`, background: sColor }} />
-                                </div>
-                                <span style={{ fontSize: 12, color: 'var(--muted)' }}>{primary.severity}%</span>
+                {/* Status badge */}
+                <div className="status-badge" style={{ background: `${sColor}20`, color: sColor, border: `1px solid ${sColor}40` }}>
+                    <StatusDot status={primary.status} />
+                    {primary.status} Crime Area
+                </div>
+
+                {/* Meta rows */}
+                <div className="meta-rows" style={{ marginTop: 16 }}>
+                    <div className="meta-row">
+                        <span className="meta-key">Est. Cases</span>
+                        <span>{primary.cases?.toLocaleString()}</span>
+                    </div>
+                    <div className="meta-row">
+                        <span className="meta-key">Population (Lakhs)</span>
+                        <span>{primary.population}</span>
+                    </div>
+                    <div className="meta-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+                        <span className="meta-key">Severity Score</span>
+                        <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: 12 }}>
+                            <div className="severity-bar-bg">
+                                <div className="severity-bar-fill"
+                                    style={{ width: `${severityAnim}%`, background: sColor }} />
                             </div>
+                            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{primary.severity}%</span>
                         </div>
+                    </div>
+                    <div className="meta-row">
+                        <span className="meta-key">Model Confidence</span>
+                        <ConfBadge confidence={primary.confidence} />
                     </div>
                 </div>
 
-                {/* ALTERNATE */}
-                {alternate ? (
-                    <div className="alt-card">
-                        <div className="alt-header">
-                            <span className="alt-title">{modelUsed === 'v3_combined' ? `V1 · ${crimeType} Specific` : 'V3 Combined · 400 Trees'}</span>
-                            <span className="exp-tag">{modelUsed === 'v3_combined' ? 'PER-CRIME' : 'EXPERIMENTAL'}</span>
-                        </div>
-                        <div>
-                            <span className="alt-rate">{alternate.mean}</span>
-                            <span className="alt-pm">± {alternate.std}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <span style={{ fontSize: 13, color: 'var(--muted)' }}>Confidence:</span>
-                            <ConfBadge confidence={alternate.confidence} />
-                        </div>
-                        <div style={{ fontSize: 12, color: 'var(--muted)', background: 'rgba(255,255,255,0.03)', padding: '8px 10px', borderRadius: 8 }}>
-                            <strong>How to read:</strong> {modelUsed === 'v3_combined'
-                                ? `V1 prediction for "${crimeType}" specifically. Std from V3's 400 trees.`
-                                : 'V3 total crime rate. Std across 400 trees — lower = more confident.'}
-                        </div>
-                        <p className="alt-disclaimer">
-                            {modelUsed === 'v3_combined'
-                                ? `V3 predicts total crime rate. This card shows V1's prediction for "${crimeType}" specifically.`
-                                : 'V3 trained on combined NCRB + incident data (GroupKFold CV, R²=92.15%).'}
-                        </p>
-                    </div>
-                ) : (
-                    <div className="na-card">
-                        <span>ℹ️ Alternate estimate not available for <strong>{city}</strong><br />
-                            (city outside incident-level training set)</span>
-                    </div>
-                )}
+                {/* V3 info banner */}
+                <div style={{
+                    marginTop: 16, padding: '10px 14px', borderRadius: 10,
+                    background: 'rgba(108,99,255,0.08)', border: '1px solid rgba(108,99,255,0.2)',
+                    fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 8
+                }}>
+                    <Shield size={14} color="#6c63ff" />
+                    <span>
+                        <strong style={{ color: '#6c63ff' }}>V3 Combined Model</strong> — trained on NCRB (2014–2021) + 40,000+ incident records with
+                        GroupKFold cross-validation. Uncertainty ±{primary.std} from {400} independent decision trees.
+                    </span>
+                </div>
             </div>
 
             {/* ── TREND CHART ── */}
-            <div className="card chart-section">
+            <div className="card chart-section" style={{ marginTop: 20 }}>
                 <div className="section-title">📈 Predicted Crime Trend — Next 5 Years</div>
                 <ResponsiveContainer width="100%" height={220}>
                     <LineChart data={trend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>

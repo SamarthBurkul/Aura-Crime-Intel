@@ -4,10 +4,9 @@ import axios from 'axios'
 
 const CITY_OPTIONS = [
     { value: '0', label: 'Ahmedabad' }, { value: '1', label: 'Bengaluru' }, { value: '2', label: 'Chennai' },
-    { value: '3', label: 'Coimbatore' }, { value: '4', label: 'Delhi' }, { value: '5', label: 'Ghaziabad' },
-    { value: '6', label: 'Hyderabad' }, { value: '7', label: 'Indore' }, { value: '8', label: 'Jaipur' },
-    { value: '9', label: 'Kanpur' }, { value: '10', label: 'Kochi' }, { value: '11', label: 'Kolkata' },
-    { value: '12', label: 'Kozhikode' }, { value: '13', label: 'Lucknow' }, { value: '14', label: 'Mumbai' },
+    { value: '4', label: 'Delhi' }, { value: '5', label: 'Ghaziabad' },
+    { value: '7', label: 'Indore' }, { value: '8', label: 'Jaipur' }, { value: '9', label: 'Kanpur' },
+    { value: '11', label: 'Kolkata' }, { value: '13', label: 'Lucknow' }, { value: '14', label: 'Mumbai' },
     { value: '15', label: 'Nagpur' }, { value: '16', label: 'Patna' }, { value: '17', label: 'Pune' },
     { value: '18', label: 'Surat' }
 ]
@@ -57,7 +56,8 @@ export default function HomePage({ setResult }) {
             setResult(data)
             nav('/result')
         } catch (err) {
-            setError('Prediction failed. Is the Flask server running on port 5000?')
+            const msg = err.response?.data?.error
+            setError(msg || 'Prediction failed. Is the Flask server running on port 5000?')
         } finally {
             setLoading(false)
         }
@@ -67,10 +67,10 @@ export default function HomePage({ setResult }) {
         <div className="page fade-up">
             {/* ── HERO ── */}
             <div className="page-hero">
-                <div className="hero-badge">🤖 Dual AI Model · 93%+ R² Accuracy</div>
+                <div className="hero-badge">🤖 V3 Combined Model · R² 92.15% · 400 Trees</div>
                 <h1 className="page-hero-title">Crime Rate Prediction<br />for Indian Cities</h1>
                 <p className="page-hero-sub">
-                    Powered by Random Forest ML trained on NCRB data (2014–2021) + incident-level records from 40,000+ cases
+                    Powered by V3 Combined Random Forest — trained on NCRB data + 40,000+ incident-level records using GroupKFold cross-validation
                 </p>
             </div>
 
