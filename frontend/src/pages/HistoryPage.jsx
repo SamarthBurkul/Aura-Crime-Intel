@@ -60,6 +60,7 @@ export default function HistoryPage() {
                                 <th>City</th>
                                 <th>Year</th>
                                 <th>Crime Type</th>
+                                <th>Model</th>
                                 <th>Primary Rate</th>
                                 <th>Alt Mean</th>
                                 <th>Alt ±Std</th>
@@ -75,6 +76,16 @@ export default function HistoryPage() {
                                     <td style={{ fontWeight: 500 }}>{r.city}</td>
                                     <td>{r.year}</td>
                                     <td style={{ color: 'var(--muted)', fontSize: 13 }}>{r.crimeType}</td>
+                                    <td style={{ fontSize: 11 }}>
+                                        <span style={{
+                                            padding: '2px 6px', borderRadius: 4, fontSize: 10, fontWeight: 600,
+                                            background: r.modelUsed === 'v3_combined' ? 'rgba(108,99,255,0.15)' : 'rgba(255,255,255,0.08)',
+                                            color: r.modelUsed === 'v3_combined' ? '#6c63ff' : 'var(--muted)'
+                                        }}>
+                                            {r.modelUsed === 'v3_combined' ? 'V3' : 'V1'}
+                                        </span>
+                                        {r.reliable && <span style={{ marginLeft: 4, fontSize: 10 }}>✅</span>}
+                                    </td>
                                     <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{r.crimeRate}</td>
                                     <td>{r.altMean ?? <span style={{ color: 'var(--muted)' }}>N/A</span>}</td>
                                     <td style={{ color: 'var(--muted)' }}>{r.altStd != null ? `±${r.altStd}` : '—'}</td>

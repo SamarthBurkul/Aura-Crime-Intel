@@ -44,7 +44,7 @@ export default function ResultPage({ result }) {
         )
     }
 
-    const { city, crimeType, year, primary, alternate, trend, policies } = result
+    const { city, crimeType, year, primary, alternate, trend, policies, modelUsed, reliable } = result
     const statusColors = { 'Very Low': '#2ecc71', Low: '#f1c40f', High: '#e67e22', 'Very High': '#e74c3c' }
     const sColor = statusColors[primary.status] || '#888'
 
@@ -59,7 +59,7 @@ export default function ResultPage({ result }) {
             {/* ── HEADER ── */}
             <div className="result-header">
                 <div className="result-title">{city} · {crimeType}</div>
-                <div className="result-meta">Predicted for year {year}</div>
+                <div className="result-meta">Predicted for year {year} · Model: {modelUsed === 'v3_combined' ? 'V3 Combined (400 trees)' : 'V1 Fallback'}{reliable ? ' · ✅ Reliable City' : ''}</div>
             </div>
 
             {/* ── PRIMARY + ALTERNATE SIDE BY SIDE ── */}
@@ -67,7 +67,7 @@ export default function ResultPage({ result }) {
 
                 {/* PRIMARY */}
                 <div className="primary-card">
-                    <div className="primary-label">Primary Model · R² 93.2%</div>
+                    <div className="primary-label">{modelUsed === 'v3_combined' ? 'V3 Combined · R² 92.15%' : 'V1 Original · R² 93.2%'}</div>
                     <div className="crime-rate-big" style={{ color: sColor }}>
                         {primary.crimeRate}
                     </div>
@@ -96,8 +96,8 @@ export default function ResultPage({ result }) {
                 {alternate ? (
                     <div className="alt-card">
                         <div className="alt-header">
-                            <span className="alt-title">Alternate Model · v2</span>
-                            <span className="exp-tag">EXPERIMENTAL</span>
+                            <span className="alt-title">{modelUsed === 'v3_combined' ? 'V1 Original (Cross-check)' : 'Uncertainty Analysis'}</span>
+                            <span className="exp-tag">{modelUsed === 'v3_combined' ? 'COMPARISON' : 'EXPERIMENTAL'}</span>
                         </div>
                         <div>
                             <span className="alt-rate">{alternate.mean}</span>
@@ -108,12 +108,14 @@ export default function ResultPage({ result }) {
                             <ConfBadge confidence={alternate.confidence} />
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--muted)', background: 'rgba(255,255,255,0.03)', padding: '8px 10px', borderRadius: 8 }}>
-                            <strong>How to read:</strong> Mean ± Std across 100 decision trees.
-                            Lower std = more consistent prediction.
+                            <strong>How to read:</strong> {modelUsed === 'v3_combined'
+                                ? 'V1 original model prediction for comparison. Std computed across 400 decision trees of V3.'
+                                : 'Mean ± Std across decision trees. Lower std = more consistent.'}
                         </div>
                         <p className="alt-disclaimer">
-                            Trained on 40,160 incident-level records aggregated to city-year rates.
-                            Used for additional insight only — primary model drives the verdict.
+                            {modelUsed === 'v3_combined'
+                                ? 'V3 trained on combined NCRB + incident data (GroupKFold CV, 400 trees). V1 shown as cross-reference.'
+                                : 'Trained on 40,160 incident-level records. Used for insight only — primary model drives the verdict.'}
                         </p>
                     </div>
                 ) : (
