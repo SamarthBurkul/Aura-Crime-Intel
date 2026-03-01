@@ -4,6 +4,7 @@ import './index.css'
 import Navbar from './components/Navbar'
 
 // Lazy load all pages for code splitting and faster initial load
+const LandingPage = lazy(() => import('./pages/LandingPage'))
 const Home = lazy(() => import('./pages/Home'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const CityAnalysis = lazy(() => import('./pages/CityAnalysis'))
@@ -24,20 +25,33 @@ const LoadingFallback = React.memo(() => (
 
 LoadingFallback.displayName = 'LoadingFallback'
 
+// Wrapper that shows Navbar for all routes EXCEPT the landing page
+function NavbarLayout({ children }) {
+  return (
+    <>
+      <Navbar />
+      {children}
+    </>
+  )
+}
+
 // Main App component with lazy loading and Suspense
 export default function App() {
   return (
     <BrowserRouter>
-      <Navbar />
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/city-analysis" element={<CityAnalysis />} />
-          <Route path="/prediction" element={<Prediction />} />
-          <Route path="/comparison" element={<Comparison />} />
-          <Route path="/heatmap" element={<Heatmap />} />
-          <Route path="/about" element={<About />} />
+          {/* Landing page — no navbar */}
+          <Route path="/" element={<LandingPage />} />
+
+          {/* All inner pages — with navbar */}
+          <Route path="/home" element={<NavbarLayout><Home /></NavbarLayout>} />
+          <Route path="/dashboard" element={<NavbarLayout><Dashboard /></NavbarLayout>} />
+          <Route path="/city-analysis" element={<NavbarLayout><CityAnalysis /></NavbarLayout>} />
+          <Route path="/prediction" element={<NavbarLayout><Prediction /></NavbarLayout>} />
+          <Route path="/comparison" element={<NavbarLayout><Comparison /></NavbarLayout>} />
+          <Route path="/heatmap" element={<NavbarLayout><Heatmap /></NavbarLayout>} />
+          <Route path="/about" element={<NavbarLayout><About /></NavbarLayout>} />
         </Routes>
       </Suspense>
     </BrowserRouter>

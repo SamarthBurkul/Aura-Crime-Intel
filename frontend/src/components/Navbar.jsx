@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Home, LayoutDashboard, MapPin, TrendingUp, GitCompare, Map, Info } from 'lucide-react'
+import { Home, LayoutDashboard, MapPin, TrendingUp, GitCompare, Map, Info, ChevronLeft } from 'lucide-react'
 
 const Navbar = React.memo(() => {
   const navigate = useNavigate()
@@ -8,7 +8,7 @@ const Navbar = React.memo(() => {
 
   // Memoize menu items to prevent re-creation on every render
   const menuItems = useMemo(() => [
-    { path: '/', label: 'Home', icon: Home },
+    { path: '/home', label: 'Home', icon: Home },
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/city-analysis', label: 'City Analysis', icon: MapPin },
     { path: '/prediction', label: 'Prediction', icon: TrendingUp },
@@ -28,7 +28,7 @@ const Navbar = React.memo(() => {
 
         {/* Logo (Left side) */}
         <div
-          onClick={() => handleNavigate('/')}
+          onClick={() => handleNavigate('/home')}
           className="flex items-center space-x-3 cursor-pointer group"
         >
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300">
@@ -61,6 +61,15 @@ const Navbar = React.memo(() => {
               </button>
             )
           })}
+
+          {/* Back to Landing */}
+          <button
+            onClick={() => handleNavigate('/')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:border-indigo-500 hover:text-indigo-400 text-xs font-semibold transition-all duration-200 ml-2"
+          >
+            <ChevronLeft size={13} />
+            <span className="hidden md:inline-block">Back</span>
+          </button>
         </div>
 
       </div>
