@@ -8,6 +8,13 @@
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      #modal-root: InterventionSimulator renders here via ReactDOM.createPortal.
+      Keeping it outside #root prevents z-index stacking context issues and
+      eliminates duplicate DOM nodes caused by multiple <InterventionSimulator />
+      mounts in CityAnalysis / Prediction / EarlyWarningAlert.
+    -->
+    <div id="modal-root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

@@ -22,7 +22,6 @@ import {
 } from 'recharts';
 import axios from 'axios';
 import EarlyWarningAlert from '../components/EarlyWarningAlert';
-import InterventionSimulator from '../components/InterventionSimulator';
 
 const API = 'http://127.0.0.1:5000';
 
@@ -168,7 +167,6 @@ export default function Prediction() {
   const [serverError, setServerError] = useState('');
   const [result, setResult] = useState(null);
   const [severityAnim, setSeverityAnim] = useState(0);
-  const [showSimulator, setShowSimulator] = useState(false);
 
   // History
   const [historyRows, setHistoryRows] = useState([]);
@@ -482,7 +480,6 @@ export default function Prediction() {
                 {/* Main card */}
                 <EarlyWarningAlert
                   alertData={result}
-                  onOpenSimulator={() => setShowSimulator(true)}
                 />
 
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
@@ -756,16 +753,6 @@ export default function Prediction() {
                   </button>
                 </div>
               </div>
-            )}
-
-            {showSimulator && result && (
-              <InterventionSimulator
-                key="simulator-modal"
-                city={result.city}
-                year={result.year}
-                baseRate={result.primary?.crimeRate || result.rate}
-                onClose={() => setShowSimulator(false)}
-              />
             )}
 
           </div>
