@@ -35,7 +35,7 @@ const Navbar = React.memo(() => {
             <span className="text-white font-bold text-lg">A</span>
           </div>
           <span className="text-xl font-bold text-white group-hover:text-indigo-400 transition-colors duration-300">
-            Aura Crime Intel
+            CivicSentinel
           </span>
         </div>
 

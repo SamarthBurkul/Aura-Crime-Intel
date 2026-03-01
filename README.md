@@ -1,4 +1,4 @@
-# 🔍 Aura Crime Intel
+# 🔍 CivicSentinel
 
 > An AI-powered crime rate prediction platform for Indian metropolitan cities — built with a **dual Random Forest model** backend, a **React + Vite** frontend, and a **Flask REST API**.
 

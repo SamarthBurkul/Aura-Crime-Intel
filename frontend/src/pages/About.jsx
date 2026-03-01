@@ -56,7 +56,7 @@ const About = React.memo(() => {
 
           {/* Page Header */}
           <div>
-            <h1 className="text-3xl font-semibold mb-4 text-white">About Aura Crime Intel</h1>
+            <h1 className="text-3xl font-semibold mb-4 text-white">About CivicSentinel</h1>
             <p className="text-slate-400 text-base leading-relaxed mb-6">AI-driven Crime Decision Intelligence Platform</p>
           </div>
 
@@ -64,7 +64,7 @@ const About = React.memo(() => {
           <div className="rounded-2xl bg-slate-900 border border-slate-800 p-8">
             <h2 className="text-2xl font-bold text-white mb-4">Our Mission</h2>
             <p className="text-slate-400 text-base leading-relaxed mb-6">
-              Aura Crime Intel leverages cutting-edge artificial intelligence to transform how communities,
+              CivicSentinel leverages cutting-edge artificial intelligence to transform how communities,
               law enforcement, and policymakers understand and respond to crime. By analyzing historical patterns
               and real-time data, we provide actionable insights that help create safer communities.
             </p>

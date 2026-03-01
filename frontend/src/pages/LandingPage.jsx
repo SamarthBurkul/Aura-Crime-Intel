@@ -92,10 +92,10 @@ export default function LandingPage() {
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(2,8,23,0.85)', backdropFilter: 'blur(16px)', borderBottom: '1px solid #0f172a', padding: '0 48px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 34, height: 34, borderRadius: 8, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 16, color: '#fff' }}>A</div>
-          <span style={{ fontWeight: 700, fontSize: 16, color: '#f1f5f9', letterSpacing: '-0.3px' }}>Aura Crime Intel</span>
+          <span style={{ fontWeight: 700, fontSize: 16, color: '#f1f5f9', letterSpacing: '-0.3px' }}>CivicSentinel</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-         
+
           <button
             onClick={() => navigate('/home')}
             style={{ padding: '8px 20px', borderRadius: 8, background: '#6366f1', color: '#fff', border: 'none', fontSize: 14, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
@@ -312,11 +312,11 @@ export default function LandingPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 30, height: 30, borderRadius: 7, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#fff' }}>A</div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#f1f5f9' }}>Aura Crime Intel</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#f1f5f9' }}>CivicSentinel</div>
               <div style={{ fontSize: 12, color: '#334155', marginTop: 2 }}>Built for India's Safer Tomorrow</div>
             </div>
           </div>
-          <div style={{ fontSize: 12, color: '#1e293b' }}>© 2026 Aura Crime Intel. All rights reserved.</div>
+          <div style={{ fontSize: 12, color: '#1e293b' }}>© 2026 CivicSentinel. All rights reserved.</div>
           <div style={{ display: 'flex', gap: 24, fontSize: 13, color: '#334155' }}>
             <span style={{ cursor: 'pointer' }} onClick={() => navigate('/home')}>Dashboard</span>
             <span style={{ cursor: 'pointer' }} onClick={() => navigate('/prediction')}>Prediction</span>

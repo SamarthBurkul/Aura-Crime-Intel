@@ -7,11 +7,11 @@ import {
 import axios from 'axios'
 
 const QUICK_ACTIONS = [
-  { icon: TrendingUp,    label: 'New Prediction',  description: 'Forecast crime rate for any city & year',          path: '/prediction',   color: '#6366f1', bg: 'rgba(99,102,241,0.08)',  border: 'rgba(99,102,241,0.2)'  },
-  { icon: LayoutDashboard, label: 'Dashboard',     description: 'Aggregated analytics across all cities',            path: '/dashboard',    color: '#10b981', bg: 'rgba(16,185,129,0.08)',  border: 'rgba(16,185,129,0.2)'  },
-  { icon: MapPin,        label: 'City Analysis',  description: 'Deep-dive into a single city\'s crime profile',     path: '/city-analysis', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)'  },
-  { icon: GitCompare,    label: 'Comparison',     description: 'Side-by-side crime metrics across multiple cities', path: '/comparison',   color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)',  border: 'rgba(139,92,246,0.2)'  },
-  { icon: Map,           label: 'Crime Heatmap',  description: 'Interactive India map with crime intensity zones',  path: '/heatmap',      color: '#ef4444', bg: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.2)'   },
+  { icon: TrendingUp, label: 'New Prediction', description: 'Forecast crime rate for any city & year', path: '/prediction', color: '#6366f1', bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.2)' },
+  { icon: LayoutDashboard, label: 'Dashboard', description: 'Aggregated analytics across all cities', path: '/dashboard', color: '#10b981', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)' },
+  { icon: MapPin, label: 'City Analysis', description: 'Deep-dive into a single city\'s crime profile', path: '/city-analysis', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
+  { icon: GitCompare, label: 'Comparison', description: 'Side-by-side crime metrics across multiple cities', path: '/comparison', color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.2)' },
+  { icon: Map, label: 'Crime Heatmap', description: 'Interactive India map with crime intensity zones', path: '/heatmap', color: '#ef4444', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)' },
 ]
 
 // ── tiny hook: fade-in-up on mount ──────────────────────────────────────────
@@ -26,13 +26,13 @@ function useMountAnim(delay = 0) {
 
 export default function Home() {
   const navigate = useNavigate()
-  const [cities, setCities]       = useState([])
-  const [loading, setLoading]     = useState(true)
+  const [cities, setCities] = useState([])
+  const [loading, setLoading] = useState(true)
   const [backendOk, setBackendOk] = useState(null)
 
-  const header  = useMountAnim(0)
+  const header = useMountAnim(0)
   const modules = useMountAnim(120)
-  const bottom  = useMountAnim(240)
+  const bottom = useMountAnim(240)
 
   useEffect(() => {
     axios.get('/api/cities')
@@ -66,7 +66,7 @@ export default function Home() {
 
           <h1 style={{ fontSize: 40, fontWeight: 800, color: '#f8fafc', letterSpacing: '-1.5px', margin: '0 0 12px', lineHeight: 1.15 }}>
             Welcome back to{' '}
-            <span style={{ color: '#6366f1' }}>Aura Crime Intel</span>
+            <span style={{ color: '#6366f1' }}>CivicSentinel</span>
           </h1>
           <p style={{ fontSize: 15, color: '#475569', margin: 0, maxWidth: 520, lineHeight: 1.75 }}>
             Your AI-powered crime intelligence hub. Pick a module or run a prediction — everything is one click away.
@@ -103,7 +103,7 @@ export default function Home() {
         }}>
           <div style={{ marginBottom: 16 }}>
 
-              {/* Active Cities */}
+            {/* Active Cities */}
             <div style={{ background: '#0b1120', border: '1px solid #1e293b', borderRadius: 16, padding: '24px 28px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
