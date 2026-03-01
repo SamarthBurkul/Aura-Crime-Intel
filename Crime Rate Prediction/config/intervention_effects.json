@@ -1,22 +1,21 @@
 {
+    "alert_rate_threshold_abs": 6.0,
+    "alert_rate_threshold_multiplier": 1.25,
+    "trend_accel_threshold_pct": 3.0,
     "cctv_effect_per_10pct": 1.5,
     "police_effect_per_10pct": 3.0,
     "patrol_effect_per_10pct": 0.8,
     "saturation_k": 0.25,
-    "alert_rate_threshold_abs": 6.0,
-    "alert_rate_threshold_mult": 1.25,
-    "trend_accel_threshold_pct": 3.0,
-    "pop_per_officer": 700,
-    "severity_multipliers": {
-        "Very High": 1.5,
-        "High": 1.2,
-        "Low": 0.8,
-        "Very Low": 0.5
-    },
     "costs": {
         "cctv_per_unit": 50000,
         "officer_annual_cost": 300000,
-        "temporary_cctv_van": 750000
+        "temp_cctv_van": 750000
     },
-    "disclaimer": "Intervention Simulator provides estimates based on historical associations and configurable priors. These are NOT causal guarantees. Use as planning guidance only."
+    "pop_per_officer": 5000,
+    "severity_multipliers": {
+        "High": 0.30,
+        "Moderate": 0.15,
+        "Low": 0.05
+    },
+    "disclaimer": "Estimates based on historical associations. Not causal guarantees."
 }

@@ -6,7 +6,7 @@ export default function EarlyWarningAlert({ alertData, onOpenSimulator }) {
 
     if (!alertData || !alertData.alert) return null;
 
-    const { alert_level, reasons, action_pack } = alertData;
+    const { alert_level, reasons, action_pack, threshold_used } = alertData;
 
     const getAlertStyles = () => {
         if (alert_level === 'High') {
@@ -28,6 +28,9 @@ export default function EarlyWarningAlert({ alertData, onOpenSimulator }) {
     };
 
     const styles = getAlertStyles();
+
+    // Find the dev threshold if available (Admin check simulation)
+    const thresholdNote = threshold_used ? `(Admin Note: local threshold active at ${threshold_used} / 100k)` : '';
 
     return (
         <>
@@ -70,6 +73,12 @@ export default function EarlyWarningAlert({ alertData, onOpenSimulator }) {
                         </button>
                     </div>
                 </div>
+
+                {thresholdNote && (
+                    <div className="absolute top-2 right-4 text-[10px] text-slate-500 font-mono italic">
+                        {thresholdNote}
+                    </div>
+                )}
             </div>
 
             {/* ── ACTION PACK MODAL ── */}

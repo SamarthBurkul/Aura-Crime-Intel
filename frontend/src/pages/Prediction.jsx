@@ -224,16 +224,6 @@ export default function Prediction() {
         year: Number(selectedYear),
       });
 
-      // Fetch alert data independently
-      try {
-        const alertRes = await axios.get(`${API}/api/alert`, {
-          params: { city: selectedCity, year: selectedYear }
-        });
-        res.data.alertData = alertRes.data;
-      } catch (err) {
-        console.error('Alert fetch failed:', err);
-      }
-
       setResult(res.data);
       window.scrollTo(0, 0);
     } catch (err) {
@@ -491,7 +481,7 @@ export default function Prediction() {
 
                 {/* Main card */}
                 <EarlyWarningAlert
-                  alertData={result.alertData}
+                  alertData={result}
                   onOpenSimulator={() => setShowSimulator(true)}
                 />
 
@@ -595,7 +585,7 @@ export default function Prediction() {
                   <p className="text-xs text-slate-500 mb-6 italic">
                     Dashed line = projected via median historical growth rate (not model output)
                   </p>
-                  <div className="h-[280px]">
+                  <div className="w-full" style={{ height: '280px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart
                         data={[{ year: result.year, pred: result.primary.crimeRate }, ...result.trend]}
@@ -651,7 +641,7 @@ export default function Prediction() {
                           🟡 Strategic Resource Allocation Engine
                         </div>
                         <div className="text-sm text-slate-400">
-                          Government Budget Planning · Manpower Distribution · Infrastructure Investment
+                          Dynamic planning for {result.city}'s {result.population}L citizens · Budget · Officers · Infrastructure
                         </div>
                       </div>
                       <span className="px-4 py-2 rounded-xl text-sm font-bold border"
@@ -668,6 +658,10 @@ export default function Prediction() {
                         }}>
                         {result.resource_allocation.severity} Severity
                       </span>
+                    </div>
+
+                    <div className="bg-indigo-900/30 border border-indigo-500/30 rounded-xl p-3 mb-6 text-sm text-indigo-200">
+                      <strong>AI dynamically calculated</strong> the following figures based on {result.city}'s predicted {result.primary.crimeRate} crime rate and {result.population}L population size.
                     </div>
 
                     {/* 4 Key Metric Cards */}
@@ -691,17 +685,17 @@ export default function Prediction() {
                     </div>
 
                     {/* 4 Recommendation Sections */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {result.resource_allocation.personnel?.length > 0 && (
                         <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-6">
                           <div className="text-sm font-bold text-indigo-400 mb-4 flex items-center gap-2">
                             👮 PERSONNEL DEPLOYMENT
                           </div>
-                          <ul className="space-y-2">
+                          <ul className="space-y-4">
                             {result.resource_allocation.personnel.map((item, i) => (
-                              <li key={i} className="flex items-start gap-3 text-sm text-slate-300">
+                              <li key={i} className="flex items-start gap-4 text-sm text-slate-300">
                                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
-                                {item}
+                                <span className="leading-relaxed">{item}</span>
                               </li>
                             ))}
                           </ul>
@@ -712,11 +706,11 @@ export default function Prediction() {
                           <div className="text-sm font-bold text-amber-400 mb-4 flex items-center gap-2">
                             🏗️ INFRASTRUCTURE
                           </div>
-                          <ul className="space-y-2">
+                          <ul className="space-y-4">
                             {result.resource_allocation.infrastructure.map((item, i) => (
-                              <li key={i} className="flex items-start gap-3 text-sm text-slate-300">
+                              <li key={i} className="flex items-start gap-4 text-sm text-slate-300">
                                 <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0" />
-                                {item}
+                                <span className="leading-relaxed">{item}</span>
                               </li>
                             ))}
                           </ul>
@@ -727,11 +721,11 @@ export default function Prediction() {
                           <div className="text-sm font-bold text-emerald-400 mb-4 flex items-center gap-2">
                             💻 TECHNOLOGY & SYSTEMS
                           </div>
-                          <ul className="space-y-2">
+                          <ul className="space-y-4">
                             {result.resource_allocation.technology.map((item, i) => (
-                              <li key={i} className="flex items-start gap-3 text-sm text-slate-300">
+                              <li key={i} className="flex items-start gap-4 text-sm text-slate-300">
                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0" />
-                                {item}
+                                <span className="leading-relaxed">{item}</span>
                               </li>
                             ))}
                           </ul>
@@ -742,11 +736,11 @@ export default function Prediction() {
                           <div className="text-sm font-bold text-amber-300 mb-4 flex items-center gap-2">
                             🤝 COMMUNITY PROGRAMS
                           </div>
-                          <ul className="space-y-2">
+                          <ul className="space-y-4">
                             {result.resource_allocation.community_programs.map((item, i) => (
-                              <li key={i} className="flex items-start gap-3 text-sm text-slate-300">
+                              <li key={i} className="flex items-start gap-4 text-sm text-slate-300">
                                 <div className="w-1.5 h-1.5 rounded-full bg-amber-300 mt-2 shrink-0" />
-                                {item}
+                                <span className="leading-relaxed">{item}</span>
                               </li>
                             ))}
                           </ul>
@@ -779,6 +773,7 @@ export default function Prediction() {
 
             {showSimulator && result && (
               <InterventionSimulator
+                key="simulator-modal"
                 city={result.city}
                 year={result.year}
                 baseRate={result.primary?.crimeRate || result.rate}

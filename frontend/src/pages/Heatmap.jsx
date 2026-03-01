@@ -35,14 +35,26 @@ export default function Heatmap() {
   const [error, setError] = useState(null);
   const [selectedCity, setSelectedCity] = useState(null);
   const [filterSev, setFilterSev] = useState('All');
+  const API = 'http://127.0.0.1:5000';
 
-  const fetchHeatmap = useCallback((yr) => {
+  const fetchHeatmap = useCallback(async (yr) => {
     setLoading(true);
     setError(null);
-    axios.get(`http://127.0.0.1:5000/api/heatmap?year=${yr}`)
-      .then(r => setCities(r.data))
-      .catch(e => setError(e.response?.data?.error || e.message || 'Failed to load heatmap data'))
-      .finally(() => setLoading(false));
+    try {
+      const cacheKey = `heatmap_${yr}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        setCities(JSON.parse(cached));
+      } else {
+        const res = await axios.get(`${API}/api/heatmap?year=${yr}`);
+        setCities(res.data);
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(res.data)); } catch (e) { }
+      }
+    } catch (e) {
+      setError(e.response?.data?.error || e.message || 'Failed to load heatmap data');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { fetchHeatmap(year); }, [year, fetchHeatmap]);

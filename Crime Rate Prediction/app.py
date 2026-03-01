@@ -703,70 +703,6 @@ def predict():
         pt['trend_is_projection'] = True
     graph_b64 = _make_chart(trend)
 
-    # ── Crime Early Warning System ─────────────────────────────────────────────
-    # STEP 1: Compute Growth Metrics
-    try:
-        current_rate = crime_rate
-        next_year_rate = trend[1]["pred"]
-        growth_rate = (next_year_rate - current_rate) / current_rate
-        
-        second_year_growth = 0
-        if len(trend) > 2:
-            second_year_growth = (trend[2]["pred"] - trend[1]["pred"]) / trend[1]["pred"]
-    except (IndexError, ZeroDivisionError, KeyError):
-        growth_rate = 0
-        second_year_growth = 0
-
-    # STEP 2: Define Alert Threshold Framework
-    if current_rate > 20 or growth_rate > 0.20:
-        alert_level = "Critical"
-    elif current_rate > 15 or growth_rate > 0.10:
-        alert_level = "High"
-    elif growth_rate > 0.05:
-        alert_level = "Escalating"
-    else:
-        alert_level = "Stable"
-
-    # Escalation condition
-    if second_year_growth > growth_rate and alert_level != "Critical":
-        if alert_level == "Stable": alert_level = "Escalating"
-        elif alert_level == "Escalating": alert_level = "High"
-        elif alert_level == "High": alert_level = "Critical"
-
-    # STEP 3: Government Policy Mapping
-    policy_list = []
-    if alert_level == "Critical":
-        policy_list = [
-            "Immediate intervention required",
-            "Activate emergency crime control task force",
-            "Increase patrol deployment by 15–20%",
-            "Allocate special enforcement budget",
-            "Initiate inter-agency coordination"
-        ]
-    elif alert_level == "High":
-        policy_list = [
-            "Increase patrol density in high-risk areas",
-            "Expand surveillance infrastructure",
-            "Conduct weekly risk monitoring review"
-        ]
-    elif alert_level == "Escalating":
-        policy_list = [
-            "Increase intelligence-based patrol planning",
-            "Enhance data-driven enforcement review"
-        ]
-    else:
-        policy_list = [
-            "Maintain routine monitoring and quarterly review"
-        ]
-
-    # STEP 4: Add Structured Response
-    early_warning = {
-        "level": alert_level,
-        "growth_rate_percent": round(growth_rate * 100, 2),
-        "classification_basis": "Rate and growth threshold evaluation",
-        "recommended_actions": policy_list
-    }
-    
     # ── Resource Allocation Recommendation Engine (MAJOR USP) ────────────────────
     # Generate comprehensive resource allocation recommendations
     resource_allocation = _resource_allocation_recommendations(
@@ -775,6 +711,23 @@ def predict():
         city=city_display,
         population_lakh=pop_lakh
     )
+    # ───────────────────────────────────────────────────────────────────────────
+
+    # ── Crime Early Warning System / Action Pack ────────────────────────────────
+    cfg = _load_intervention_config()
+    alert_info = compute_alert(city=city_canonical, base_rate=crime_rate, std=std, trend_metrics=trend, config=cfg)
+    
+    action_pack = None
+    if alert_info['alert']:
+        action_pack = generate_action_pack(city_display, year, crime_rate, std, pop_lakh, status, severity)
+        
+        # Log alert async
+        try:
+            log_alert(city=city_display, year=year, rate=crime_rate, std=std,
+                      alert_level=alert_info['alert_level'], reasons=alert_info['reasons'],
+                      action_pack=action_pack, model_used='v3')
+        except Exception:
+            pass
     # ───────────────────────────────────────────────────────────────────────────
 
     # Task 3: log with crime_type always present
@@ -823,7 +776,14 @@ def predict():
         'trend':    trend,         # Each point has trend_is_projection=True (G3)
         'graph':    graph_b64,
         'policies': _policies(crime_rate),
-        'early_warning': early_warning,
+        
+        # New alert structure inline payload
+        'alert':          alert_info['alert'],
+        'alert_level':    alert_info['alert_level'],
+        'reasons':        alert_info['reasons'],
+        'threshold_used': alert_info['threshold_used'],
+        'action_pack':    action_pack,
+        
         'resource_allocation': resource_allocation,
     })
 
@@ -1021,30 +981,94 @@ def city_analysis():
         return jsonify({'error': str(e)}), 500
 
 
-# ── Intervention config loader ─────────────────────────────────────────────────
 def _load_intervention_config():
     """Load intervention effect multipliers from config file."""
     cfg_path = os.path.join(os.path.dirname(__file__), 'config', 'intervention_effects.json')
     try:
         with open(cfg_path) as f:
-            return json.load(f)
+            cfg = json.load(f)
     except FileNotFoundError:
         # Safe defaults if config missing
-        return {
+        cfg = {
             'cctv_effect_per_10pct': 1.5,
             'police_effect_per_10pct': 3.0,
             'patrol_effect_per_10pct': 0.8,
             'saturation_k': 0.25,
             'alert_rate_threshold_abs': 6.0,
-            'alert_rate_threshold_mult': 1.25,
+            'alert_rate_threshold_multiplier': 1.25,
             'trend_accel_threshold_pct': 3.0,
-            'pop_per_officer': 700,
-            'severity_multipliers': {'Very High': 1.5, 'High': 1.2, 'Low': 0.8, 'Very Low': 0.5},
-            'costs': {'cctv_per_unit': 50000, 'officer_annual_cost': 300000, 'temporary_cctv_van': 750000},
+            'pop_per_officer': 5000,
+            'severity_multipliers': {'High': 0.3, 'Moderate': 0.15, 'Low': 0.05, 'Very High': 0.3},
+            'costs': {'cctv_per_unit': 50000, 'officer_annual_cost': 300000, 'temp_cctv_van': 750000},
             'disclaimer': 'Estimates based on historical associations. Not causal guarantees.',
         }
+    
+    # Allow environment overrides (as floats)
+    if 'ALERT_RATE_THRESHOLD_ABS' in os.environ:
+        try: cfg['alert_rate_threshold_abs'] = float(os.environ['ALERT_RATE_THRESHOLD_ABS'])
+        except ValueError: pass
+    if 'ALERT_RATE_MULTIPLIER' in os.environ:
+        try: cfg['alert_rate_threshold_multiplier'] = float(os.environ['ALERT_RATE_MULTIPLIER'])
+        except ValueError: pass
+    if 'TREND_ACCEL_THRESHOLD' in os.environ:
+        try: cfg['trend_accel_threshold_pct'] = float(os.environ['TREND_ACCEL_THRESHOLD'])
+        except ValueError: pass
+
+    return cfg
 
 import os as _os_module  # ensure os is available
+
+def compute_alert(city, base_rate, std, trend_metrics, config):
+    """
+    Centralized alert computation matching the new strict threshold logic.
+    """
+    threshold_abs = config.get('alert_rate_threshold_abs', 6.0)
+    threshold_mult = config.get('alert_rate_threshold_multiplier', 1.25)
+    trend_threshold = config.get('trend_accel_threshold_pct', 3.0)
+
+    # Simplified mock for city_median out of _meta if needed, but per spec we can default to threshold_abs
+    # if historical median isn't explicitly listed in the minimal payload.
+    city_median = threshold_abs 
+    active_threshold = max(threshold_abs, city_median * threshold_mult)
+
+    alert_by_rate = base_rate >= active_threshold
+
+    # Calculate trend acceleration (median of last few y/y changes)
+    trend_accel_pct = 0.0
+    if isinstance(trend_metrics, list) and len(trend_metrics) > 1:
+        growths = []
+        for i in range(1, len(trend_metrics)):
+            prev = trend_metrics[i-1]['pred']
+            curr = trend_metrics[i]['pred']
+            if prev > 0:
+                growths.append(((curr - prev) / prev) * 100)
+        if growths:
+            trend_accel_pct = sorted(growths)[len(growths)//2]
+    
+    alert_by_trend = trend_accel_pct >= trend_threshold
+
+    # Decision tree
+    is_alert = False
+    alert_level = 'Low'
+    if alert_by_rate or (alert_by_trend and base_rate > city_median):
+        is_alert = True
+        alert_level = 'High'
+    elif (base_rate >= active_threshold * 0.95): # within 5% of threshold
+        is_alert = True
+        alert_level = 'Moderate'
+    
+    reasons = []
+    if alert_by_rate: reasons.append('rate_above_threshold')
+    if alert_by_trend: reasons.append('trend_accelerating')
+    reasons.append(f'threshold_used:{active_threshold}')
+    reasons.append(f'trend_accel_pct:{round(trend_accel_pct, 2)}')
+
+    return {
+        'alert': is_alert,
+        'alert_level': alert_level,
+        'reasons': reasons,
+        'threshold_used': active_threshold
+    }
 
 def generate_action_pack(city, year, rate, std, pop_lakh, status, severity):
     """
@@ -1055,12 +1079,12 @@ def generate_action_pack(city, year, rate, std, pop_lakh, status, severity):
     sev_mult = cfg.get('severity_multipliers', {}).get(status, 1.0)
     pop_per_officer = cfg.get('pop_per_officer', 700)
 
-    base_officers = int((pop_lakh * 100000) / pop_per_officer)
+    base_officers = round((pop_lakh * 100000) / pop_per_officer)
     officers_to_deploy = round(base_officers * sev_mult)
     est_cases = math.ceil(rate * pop_lakh)
 
     # Budget estimate (min/max based on severity)
-    officer_cost = cfg['costs']['officer_annual_cost']
+    officer_cost = cfg.get('costs', {}).get('officer_annual_cost', 300000)
     budget_min = int(officers_to_deploy * officer_cost * 0.3)
     budget_max = int(officers_to_deploy * officer_cost * 0.7)
 
@@ -1257,12 +1281,15 @@ def simulate_intervention():
     police_pct = max(0, min(50,  float(interventions.get('police_strength_percent', 0))))
     patrol_pct = max(0, min(100, float(interventions.get('patrol_frequency_pct', 0))))
 
-    # Logistic saturation: effective_reduction = effect_per_10 * (1 - exp(-k * pct/10)) / 100
+    # Logistic saturation
+    # formula: effective_pct = 1 - exp(-k*(pct/10))
+    # reduction_pct = multiplier_per_10pct * (effective_pct * (pct/10)) / 100
     def logistic_reduction(pct, effect_per_10):
         if pct <= 0:
             return 0.0
-        raw = (effect_per_10 / 100) * (1 - math.exp(-k * pct / 10))
-        return min(raw, 0.30)  # cap at 30% max per lever
+        effective_pct = 1 - math.exp(-k * (pct / 10))
+        reduction_pct = effect_per_10 * (effective_pct * (pct / 10)) / 100
+        return min(reduction_pct, 0.30)  # max 30% reduction per lever
 
     cctv_red   = logistic_reduction(cctv_pct,   cfg.get('cctv_effect_per_10pct', 1.5))
     police_red = logistic_reduction(police_pct, cfg.get('police_effect_per_10pct', 3.0))

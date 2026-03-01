@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { X, Sliders, TrendingDown, DollarSign, Activity } from 'lucide-react';
+import { X, Sliders, TrendingDown, DollarSign, Activity, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip as ReTooltip, CartesianGrid, ResponsiveContainer } from 'recharts';
 
 const API = 'http://127.0.0.1:5000';
@@ -117,7 +117,7 @@ export default function InterventionSimulator({ city, year, baseRate, onClose })
                             onClick={() => { setCctvPct(0); setPolicePct(0); setPatrolPct(0); }}
                             className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-medium border border-slate-700 transition-colors text-sm"
                         >
-                            Reset to Base Rate ({baseRate})
+                            Reset Interventions (Base: <strong>{baseRate}</strong>)
                         </button>
                     </div>
                 </div>
@@ -129,12 +129,17 @@ export default function InterventionSimulator({ city, year, baseRate, onClose })
                     </button>
 
                     {!simResult ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
-                            <Activity className="animate-pulse mb-4 text-slate-700" size={48} />
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 animate-pulse">
+                            <Activity className="mb-4 text-slate-700" size={48} />
                             <p>Initializing simulation engine...</p>
                         </div>
                     ) : (
-                        <div className={`flex-1 flex flex-col transition-opacity duration-300 ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
+                        <div className="flex-1 flex flex-col relative w-full h-full">
+                            {isLoading && (
+                                <div className="absolute inset-0 z-50 bg-slate-900/50 backdrop-blur-[2px] rounded-xl flex items-center justify-center">
+                                    <Activity className="animate-pulse text-indigo-500" size={32} />
+                                </div>
+                            )}
 
                             {/* Top Stats */}
                             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
@@ -156,14 +161,14 @@ export default function InterventionSimulator({ city, year, baseRate, onClose })
                             </div>
 
                             {/* Chart */}
-                            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 mb-6 h-[200px]">
+                            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 mb-6">
                                 <div className="flex justify-between items-center mb-2">
                                     <div className="text-sm font-semibold text-slate-300">Adjusted 5-Year Trend</div>
                                     <div className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">{simResult.model_used} projection</div>
                                 </div>
-                                <div className="h-[140px] w-full">
+                                <div className="w-full mt-4" style={{ height: '180px' }}>
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={simResult.adjusted_trend} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
+                                        <LineChart data={simResult.adjusted_trend} margin={{ top: 5, right: 20, bottom: 5, left: -20 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                                             <XAxis dataKey="year" tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={false} dy={5} />
                                             <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} domain={['dataMin - 1', 'dataMax + 1']} />

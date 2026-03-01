@@ -157,6 +157,15 @@ python3 app.py
 | `CRP_PATH`   | `Model/crp.xlsx`                             | CRP Excel (optional pop lookup)|
 | `DB_PATH`    | `crime_predictions.db`                       | SQLite predictions log path    |
 
+### Early Warning System Overrides
+_All intervention configuration defaults to `config/intervention_effects.json`. The following environment variables can be used as overrides:_
+
+| Variable | Type | Description |
+|---|---|---|
+| `ALERT_RATE_THRESHOLD_ABS` | Float | Absolute base threshold for High alert (e.g. 6.0) |
+| `ALERT_RATE_MULTIPLIER` | Float | Multiplier based on historical STD (e.g. 1.25) |
+| `TREND_ACCEL_THRESHOLD` | Float | Percentage point acceleration required for trend warnings (e.g. 3.0) |
+
 ---
 
 ## API quick reference
@@ -166,12 +175,31 @@ python3 app.py
 | GET | `/api/cities` | V3 city list (code, label, canonical) |
 | GET | `/api/supported_cities` | All 22 cities + reliable flag |
 | GET | `/api/meta` | Model metadata, crime types, year range |
-| POST | `/api/predict` | Predict crime rate; logs `city_match_method` |
-| GET | `/api/alert?city={c}&year={y}` | Crime Early Warning System — returns alert level, reasons, and Action Pack |
-| POST | `/api/simulate_intervention` | Intervention Simulator — what-if analysis with configurable levers |
+| POST | `/api/predict` | Predict crime rate. Includes `alert` info, `action_pack` inline. logs `city_match_method` |
+| POST | `/api/simulate_intervention` | Intervention Simulator — what-if analysis with configurable levers (cctv/police/patrol) |
 | GET | `/api/heatmap?year=` | Map data for all V3 cities |
 | GET | `/api/history` | Last 50 predictions from DB |
 | GET | `/api/stats` | Dashboard aggregate stats |
+
+---
+
+### Example cURLs (Early Warning & Simulator)
+
+**Prediction with Action Pack (Alerts enabled)**
+```bash
+curl -X POST http://127.0.0.1:5000/api/predict \
+     -H "Content-Type: application/json" \
+     -d '{"city": "Jaipur", "year": 2026}'
+```
+_Wait for the response layout — look for the `{"alert": true}` field alongside the `action_pack` object containing the timeline and budget estimate._
+
+**Intervention Simulator (What-If)**
+```bash
+curl -X POST http://127.0.0.1:5000/api/simulate_intervention \
+     -H "Content-Type: application/json" \
+     -d '{"city": "Jaipur", "year": 2026, "interventions": {"cctv_percent_increase": 20, "police_strength_percent": 10, "patrol_frequency_pct": 10}}'
+```
+_This uses logistic saturation combining your inputs mathematically `(1 - exp(-k * pct/10))` multiplied together._
 
 ---
 

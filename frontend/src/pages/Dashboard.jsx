@@ -40,19 +40,28 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [intel, setIntel] = useState(null);
+  const API = 'http://127.0.0.1:5000';
 
   useEffect(() => {
     const fetchIntel = async () => {
       try {
-        // Fetch historical + future trend data
         const years = [2020, 2021, 2022, 2023, 2024, 2025];
-        const requests = years.map(y => axios.get(`http://127.0.0.1:5000/api/heatmap?year=${y}`));
-        const responses = await Promise.all(requests);
-
         const dataByYear = {};
-        years.forEach((y, idx) => {
-          dataByYear[y] = responses[idx].data;
+
+        // 1. Fetch from Cache or API
+        const fetchPromises = years.map(async (y) => {
+          const cacheKey = `heatmap_${y}`;
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            dataByYear[y] = JSON.parse(cached);
+          } else {
+            const res = await axios.get(`${API}/api/heatmap?year=${y}`);
+            dataByYear[y] = res.data;
+            try { sessionStorage.setItem(cacheKey, JSON.stringify(res.data)); } catch (e) { }
+          }
         });
+
+        await Promise.all(fetchPromises);
 
         const currentYearData = dataByYear[2024] || [];
         const nextYearData = dataByYear[2025] || [];
