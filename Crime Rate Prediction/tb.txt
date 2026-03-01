@@ -1,0 +1,21 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.4, pytest-9.0.2, pluggy-1.6.0 -- C:\Program Files\Python311\python.exe
+cachedir: .pytest_cache
+rootdir: G:\Crime-Rate-Prediction\Crime Rate Prediction
+plugins: anyio-3.7.1
+collecting ... collected 4 items
+
+tests/test_simulator.py::test_simulation_reduces_rate_with_interventions PASSED [ 25%]
+tests/test_simulator.py::test_simulation_zero_interventions_results_in_no_change PASSED [ 50%]
+tests/test_simulator.py::test_simulation_invalid_city PASSED             [ 75%]
+tests/test_simulator.py::test_simulation_missing_body FAILED             [100%]
+
+================================== FAILURES ===================================
+________________________ test_simulation_missing_body _________________________
+tests\test_simulator.py:69: in test_simulation_missing_body
+    assert res.status_code == 400
+E   assert 415 == 400
+E    +  where 415 = <WrapperTestResponse streamed [415 UNSUPPORTED MEDIA TYPE]>.status_code
+=========================== short test summary info ===========================
+FAILED tests/test_simulator.py::test_simulation_missing_body - assert 415 == 400
+======================== 1 failed, 3 passed in 13.07s =========================
