@@ -92,8 +92,8 @@ export default function EarlyWarningAlert({ alertData }) {
 
             {/* ── ACTION PACK MODAL ── */}
             {showActionPack && (
-                <div className="fixed inset-0 z-[70] overflow-y-auto bg-black/80 backdrop-blur-sm">
-                    <div className="flex min-h-full items-center justify-center p-4">
+                <div id="action-pack-overlay" className="fixed inset-0 z-[70] overflow-y-auto bg-black/80 backdrop-blur-sm">
+                    <div id="action-pack-flex" className="flex min-h-full items-center justify-center p-4">
                         <div id="action-pack-container" className="bg-white rounded-xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
                             <div className="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center text-white shrink-0 print:hidden">
@@ -205,9 +205,38 @@ export default function EarlyWarningAlert({ alertData }) {
             <style dangerouslySetInnerHTML={{
                 __html: `
         @media print {
+          /* Hide everything first */
           body * { visibility: hidden; }
+          
+          /* Show print container and its children */
           #action-pack-print, #action-pack-print * { visibility: visible; }
-          #action-pack-print { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible !important; }
+          
+          /* Make the print container fill the page */
+          #action-pack-print { 
+            position: absolute !important; 
+            left: 0 !important; 
+            top: 0 !important; 
+            width: 100% !important; 
+            height: auto !important;
+            overflow: visible !important; 
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          
+          /* Prevent any parent elements from clipping or restricting height */
+          html, body, #root, #action-pack-overlay, #action-pack-flex, #action-pack-container {
+             height: auto !important;
+             max-height: none !important;
+             min-height: 0 !important;
+             overflow: visible !important;
+             position: static !important;
+             transform: none !important;
+             display: block !important;
+             padding: 0 !important;
+             margin: 0 !important;
+             border: none !important;
+             box-shadow: none !important;
+          }
         }
       `}} />
         </>
