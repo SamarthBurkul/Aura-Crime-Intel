@@ -271,7 +271,7 @@ export default function Prediction() {
             <div className="flex justify-between items-end mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Prediction History</h2>
-                <p className="text-slate-400 text-sm">Last 50 predictions — V3 Combined Model (400 trees · R² 92.15%)</p>
+                <p className="text-slate-400 text-sm">Last 50 predictions</p>
               </div>
               <button
                 onClick={loadHistory}
@@ -470,7 +470,7 @@ export default function Prediction() {
                     {result.crimeType === 'unknown' ? 'All Crimes' : result.crimeType}
                   </h2>
                   <div className="text-slate-400 text-sm">
-                    Predicted for year {result.year} · V3 Combined (400 trees · R² 92.15%)
+                    Predicted for year {result.year}
                     {result.reliable && (
                       <span className="ml-3 text-emerald-400 font-semibold inline-flex items-center gap-1">
                         <CheckCircle size={14} /> Reliable City
@@ -490,7 +490,7 @@ export default function Prediction() {
 
                   <div className="flex justify-between items-center mb-6 relative z-10">
                     <div className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
-                      V3 Combined Model · Total Crime Rate
+                      Total Crime Rate
                     </div>
                     <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${result.primary.confidence === 'High' ? 'bg-green-500/20 text-green-400 border-green-500/50' :
                       result.primary.confidence === 'Moderate' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50' :
@@ -509,12 +509,6 @@ export default function Prediction() {
                     </div>
                     <div className="text-slate-400 text-sm flex items-center gap-3">
                       total crimes per lakh population
-                      {result.primary.std != null && (
-                        <>
-                          <span className="text-slate-700">•</span>
-                          <span className="text-indigo-400/80">Uncertainty: ±{result.primary.std} across 400 trees</span>
-                        </>
-                      )}
                     </div>
                   </div>
 
@@ -565,15 +559,8 @@ export default function Prediction() {
                     </div>
                   </div>
 
-                  {/* Task 1: breakdown panel */}
+                  {/* Breakdown panel */}
                   <BreakdownPanel breakdown={result.informational_breakdown} />
-
-                  <div className="mt-8 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-start gap-4">
-                    <Shield className="text-indigo-400 shrink-0 mt-0.5" size={18} />
-                    <p className="text-sm text-slate-300 leading-relaxed">
-                      <strong className="text-indigo-400 font-semibold">V3 Combined Model</strong> — trained on NCRB (2014–2021) + 40,000+ incident records. Uncertainty ±{result.primary.std} from 400 trees.
-                    </p>
-                  </div>
                 </div>
 
                 {/* Trend chart */}

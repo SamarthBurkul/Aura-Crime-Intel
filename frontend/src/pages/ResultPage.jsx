@@ -60,7 +60,7 @@ export default function ResultPage({ result }) {
             <div className="result-header">
                 <div className="result-title">{city} · {crimeType}</div>
                 <div className="result-meta">
-                    Predicted for year {year} · V3 Combined (400 trees · R² 92.15%)
+                    Predicted for year {year}
                     {reliable && <span style={{ marginLeft: 8, color: '#2ecc71', fontWeight: 600 }}>✅ Reliable City</span>}
                 </div>
             </div>
@@ -109,7 +109,7 @@ export default function ResultPage({ result }) {
             <div className="primary-card" style={{ maxWidth: '100%' }}>
                 {/* Top row: label + confidence */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <div className="primary-label">V3 Combined Model · Total Crime Rate</div>
+                    <div className="primary-label">Total Crime Rate</div>
                     <ConfBadge confidence={primary.confidence} />
                 </div>
 
@@ -119,11 +119,6 @@ export default function ResultPage({ result }) {
                 </div>
                 <div style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 12 }}>
                     total crimes per lakh population
-                    {primary.std != null && (
-                        <span style={{ marginLeft: 10, color: '#8888aa' }}>
-                            · Uncertainty: ±{primary.std} across 400 trees
-                        </span>
-                    )}
                 </div>
 
                 {/* Status badge */}
@@ -158,18 +153,6 @@ export default function ResultPage({ result }) {
                     </div>
                 </div>
 
-                {/* V3 info banner */}
-                <div style={{
-                    marginTop: 16, padding: '10px 14px', borderRadius: 10,
-                    background: 'rgba(108,99,255,0.08)', border: '1px solid rgba(108,99,255,0.2)',
-                    fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 8
-                }}>
-                    <Shield size={14} color="#6c63ff" />
-                    <span>
-                        <strong style={{ color: '#6c63ff' }}>V3 Combined Model</strong> — trained on NCRB (2014–2021) + 40,000+ incident records with
-                        GroupKFold cross-validation. Uncertainty ±{primary.std} from {400} independent decision trees.
-                    </span>
-                </div>
             </div>
 
             {/* ── TREND CHART ── */}
