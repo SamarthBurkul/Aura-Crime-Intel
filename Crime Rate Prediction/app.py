@@ -24,7 +24,7 @@ Previous task changes preserved
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import json, math, io, base64, sqlite3
+import os, json, math, io, base64, sqlite3
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -41,7 +41,7 @@ from predict_utils import (
     project_future_rates,
     get_population,
 )
-from log_predict import init_db, log_prediction
+from log_predict import init_db, log_prediction, log_alert, log_simulation
 
 # ── Prediction Caching ─────────────────────────────────────────────────────────
 _PRED_CACHE = {}
@@ -184,30 +184,38 @@ REGION_POPULATION_RATIO = {
 def _resolve_city(city_code_or_name: str):
     """
     Accept either a numeric code string ('0', '13') or a display name
-    ('Mumbai', 'Bengaluru'). Returns (display_name, canonical_name, pop_lakh_fn)
+    ('Mumbai', 'Bengaluru'). Returns (display_name, canonical_name, code, match_method)
     or raises ValueError with city_not_supported payload.
+
+    match_method values
+    -------------------
+    'code'     — resolved via numeric city code
+    'alias'    — display name matched via CITY_CODE_BY_DISPLAY (exact or alias)
+    'rejected' — not supported (raises ValueError)
     """
     # Try as numeric code first
     display = CITY_NAMES.get(str(city_code_or_name))
-    if display is None:
-        # Try as display name
-        code = CITY_CODE_BY_DISPLAY.get(str(city_code_or_name).strip().title())
-        if code:
-            display = CITY_NAMES[code]
-            city_code_or_name = code
-        else:
-            # Build helpful short list
-            short = sorted(V3_CANONICAL)[:10]
-            raise ValueError(json.dumps({
-                "error":   "city_not_supported",
-                "message": (
-                    f"'{city_code_or_name}' is not supported by model_v3. "
-                    f"Allowed cities (partial): {short} …"
-                ),
-                "allowed_cities": sorted(V3_CANONICAL),
-            }))
-    canonical = get_canonical_name(display)
-    return display, canonical, str(city_code_or_name)
+    if display is not None:
+        canonical = get_canonical_name(display)
+        return display, canonical, str(city_code_or_name), 'code'
+
+    # Try as display/alias name (exact, alias)
+    code = CITY_CODE_BY_DISPLAY.get(str(city_code_or_name).strip().title())
+    if code:
+        display = CITY_NAMES[code]
+        canonical = get_canonical_name(display)
+        return display, canonical, code, 'alias'
+
+    # Not found → reject with helpful payload
+    short = sorted(V3_CANONICAL)[:10]
+    raise ValueError(json.dumps({
+        "error":   "city_not_supported",
+        "message": (
+            f"'{city_code_or_name}' is not supported by model_v3. "
+            f"Allowed cities (partial): {short} …"
+        ),
+        "allowed_cities": sorted(V3_CANONICAL),
+    }))
 
 
 # ── Chart helper ──────────────────────────────────────────────────────────────
@@ -586,6 +594,39 @@ def meta():
     })
 
 
+@app.route('/api/supported_cities')
+def supported_cities():
+    """
+    GET /api/supported_cities
+    Returns all V3-supported cities with reliability flag.
+    Use this to power frontend dropdowns instead of stale hard-coded lists.
+
+    Response shape:
+    {
+      "model": "v3",
+      "total": 22,
+      "cities": [
+        {"city": "Agra",      "reliable": false},
+        {"city": "Bengaluru", "reliable": true},
+        ...
+      ]
+    }
+    """
+    reliable_set = V3_RELIABLE & set(V3_CANONICAL)
+    city_list = sorted([
+        {
+            "city":     get_display_name(c),
+            "reliable": c in reliable_set,
+        }
+        for c in V3_CANONICAL
+    ], key=lambda x: x["city"])
+    return jsonify({
+        "model":  "v3",
+        "total":  len(city_list),
+        "cities": city_list,
+    })
+
+
 @app.route('/api/predict', methods=['POST'])
 def predict():
     data = request.get_json()
@@ -602,7 +643,7 @@ def predict():
 
     # ── V3 city validation ────────────────────────────────────────────────────
     try:
-        city_display, city_canonical, city_code = _resolve_city(str(city_raw))
+        city_display, city_canonical, city_code, city_match_method = _resolve_city(str(city_raw))
     except ValueError as ve:
         try:
             payload = json.loads(str(ve))
@@ -653,10 +694,13 @@ def predict():
     # Task 1: breakdown
     informational_breakdown = get_crime_breakdown(city_canonical, year, cases)
 
-    # Task 2: projection trend
+    # Task 2: projection trend (UI-only — not additional model calls)
     base_total_crimes = crime_rate * pop_lakh
     trend = project_future_rates(city=city_canonical, base_year=year,
                                   base_total_crimes=base_total_crimes, years=5)
+    # G3: tag every trend point so the frontend knows this is a projection, not a model prediction
+    for pt in trend:
+        pt['trend_is_projection'] = True
     graph_b64 = _make_chart(trend)
 
     # ── Crime Early Warning System ─────────────────────────────────────────────
@@ -738,11 +782,16 @@ def predict():
     if missing_crime_type:
         notes['logged_by_cli_missing_type'] = True
 
+    # G1/G2: log city_match_method + crime_input_used for audit trail
+    crime_input_used = crime_type if not missing_crime_type else 'total'
+
     log_id = log_prediction(
         city=city_display, year=year, population=pop_lakh * 1e5,
         prediction=crime_rate, pred_std=std, confidence=confidence,
         model_version=model_version, notes=notes,
         source=req_source, session_id=req_session_id,
+        city_match_method=city_match_method,
+        crime_input_used=crime_input_used,
     )
 
     return jsonify({
@@ -750,6 +799,8 @@ def predict():
         'pred_std':                round(std, 2),
         'confidence_label':        confidence,
         'model_version':           model_version,
+        'model_used':              'v3',               # G1: explicit single-model contract
+        'city_match_method':       city_match_method,  # G1: audit field
         'log_id':                  log_id,
         'warnings':                warnings,
         'informational_breakdown': informational_breakdown,
@@ -769,7 +820,7 @@ def predict():
             'severity':    severity,
         },
         'reliable': reliable,
-        'trend':    trend,
+        'trend':    trend,         # Each point has trend_is_projection=True (G3)
         'graph':    graph_b64,
         'policies': _policies(crime_rate),
         'early_warning': early_warning,
@@ -949,7 +1000,7 @@ def city_analysis():
         return jsonify({'error': 'Invalid year'}), 400
 
     try:
-        city_display, city_canonical, _ = _resolve_city(str(city_code))
+        city_display, city_canonical, _, _ = _resolve_city(str(city_code))
     except ValueError as ve:
         try:
             return jsonify(json.loads(str(ve))), 422
@@ -968,6 +1019,338 @@ def city_analysis():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ── Intervention config loader ─────────────────────────────────────────────────
+def _load_intervention_config():
+    """Load intervention effect multipliers from config file."""
+    cfg_path = os.path.join(os.path.dirname(__file__), 'config', 'intervention_effects.json')
+    try:
+        with open(cfg_path) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        # Safe defaults if config missing
+        return {
+            'cctv_effect_per_10pct': 1.5,
+            'police_effect_per_10pct': 3.0,
+            'patrol_effect_per_10pct': 0.8,
+            'saturation_k': 0.25,
+            'alert_rate_threshold_abs': 6.0,
+            'alert_rate_threshold_mult': 1.25,
+            'trend_accel_threshold_pct': 3.0,
+            'pop_per_officer': 700,
+            'severity_multipliers': {'Very High': 1.5, 'High': 1.2, 'Low': 0.8, 'Very Low': 0.5},
+            'costs': {'cctv_per_unit': 50000, 'officer_annual_cost': 300000, 'temporary_cctv_van': 750000},
+            'disclaimer': 'Estimates based on historical associations. Not causal guarantees.',
+        }
+
+import os as _os_module  # ensure os is available
+
+def generate_action_pack(city, year, rate, std, pop_lakh, status, severity):
+    """
+    Generate a structured action pack for government decision-making.
+    Returns a dictionary with headline, deployment numbers, budget, actions, timeline.
+    """
+    cfg = _load_intervention_config()
+    sev_mult = cfg.get('severity_multipliers', {}).get(status, 1.0)
+    pop_per_officer = cfg.get('pop_per_officer', 700)
+
+    base_officers = int((pop_lakh * 100000) / pop_per_officer)
+    officers_to_deploy = round(base_officers * sev_mult)
+    est_cases = math.ceil(rate * pop_lakh)
+
+    # Budget estimate (min/max based on severity)
+    officer_cost = cfg['costs']['officer_annual_cost']
+    budget_min = int(officers_to_deploy * officer_cost * 0.3)
+    budget_max = int(officers_to_deploy * officer_cost * 0.7)
+
+    # Headline based on severity
+    if status in ('Very High', 'High'):
+        headline = f'\u26a0 High Risk Alert — Immediate Action Recommended for {city}'
+        confidence = 'Moderate'
+    elif status == 'Low':
+        headline = f'\u2139 Moderate Risk — Preventive Measures Advised for {city}'
+        confidence = 'Moderate'
+    else:
+        headline = f'\u2705 Low Risk — Continue Monitoring for {city}'
+        confidence = 'High'
+
+    # Top regions from REGION_POPULATION_RATIO
+    region_map = REGION_POPULATION_RATIO.get(get_canonical_name(city), {})
+    top_regions = []
+    for rname, ratio in sorted(region_map.items(), key=lambda x: -x[1])[:5]:
+        top_regions.append({'name': rname, 'rate': round(rate * ratio * 3, 2)})
+
+    return {
+        'headline':            headline,
+        'officers_to_deploy':  officers_to_deploy,
+        'estimated_cases_next_year': est_cases,
+        'budget_estimate':     {'min': budget_min, 'max': budget_max, 'currency': 'INR'},
+        'top_regions':         top_regions,
+        'immediate_actions': [
+            'Increase night patrols in top-risk regions',
+            'Deploy temporary CCTV vans at identified hotspots',
+            'Activate community alert network',
+            'Coordinate with district magistrate for reinforcements',
+            'Launch public safety awareness campaign',
+        ],
+        'timeline': {
+            'immediate': ['Deploy rapid response teams', 'Activate CCTV monitoring'],
+            '30_days':   ['Install permanent CCTV at top 10 locations', 'Recruit additional officers'],
+            '90_days':   ['Complete infrastructure upgrades', 'Evaluate impact and adjust'],
+        },
+        'confidence': confidence,
+        'notes': cfg.get('disclaimer', 'Estimates based on historical associations.'),
+    }
+
+
+@app.route('/api/alert')
+def alert_endpoint():
+    """
+    GET /api/alert?city={city}&year={year}
+    Crime Early Warning System — returns alert level, reasons, and action pack.
+    """
+    city_raw = request.args.get('city', '')
+    year_raw = request.args.get('year', 2026)
+
+    try:
+        year = int(year_raw)
+    except (TypeError, ValueError):
+        return jsonify({'error': f"'year' must be integer, got {year_raw!r}"}), 400
+
+    try:
+        city_display, city_canonical, city_code, match_method = _resolve_city(str(city_raw))
+    except ValueError as ve:
+        try:
+            return jsonify(json.loads(str(ve))), 422
+        except Exception:
+            return jsonify({'error': 'city_not_supported', 'message': str(ve)}), 422
+
+    # Get prediction
+    pop_lakh = _pop_lakh_for_code(city_code, year)
+    try:
+        mean, std, confidence, model_version = get_prediction_cached(city_canonical, year)
+    except Exception as e:
+        return jsonify({'error': f'Prediction failed: {e}'}), 500
+
+    crime_rate = round(float(mean), 2)
+    std_val = round(float(std), 2)
+
+    # Status classification
+    if crime_rate <= 1:    status = 'Very Low'
+    elif crime_rate <= 5:  status = 'Low'
+    elif crime_rate <= 15: status = 'High'
+    else:                  status = 'Very High'
+    severity = min(round((crime_rate / 15) * 100, 1), 100)
+
+    # Trend data
+    base_total = crime_rate * pop_lakh
+    trend = project_future_rates(city=city_canonical, base_year=year,
+                                  base_total_crimes=base_total, years=5)
+
+    # Alert logic
+    cfg = _load_intervention_config()
+    threshold_abs = cfg.get('alert_rate_threshold_abs', 6.0)
+    threshold_mult = cfg.get('alert_rate_threshold_mult', 1.25)
+    trend_threshold = cfg.get('trend_accel_threshold_pct', 3.0)
+
+    # Compute city median from historical data (use trend as proxy)
+    city_median = threshold_abs  # default
+    alert_threshold = max(threshold_abs, city_median * threshold_mult)
+
+    alert_by_rate = crime_rate >= alert_threshold
+
+    # Trend acceleration
+    growth_rates = []
+    for i in range(1, len(trend)):
+        if trend[i-1]['pred'] > 0:
+            gr = ((trend[i]['pred'] - trend[i-1]['pred']) / trend[i-1]['pred']) * 100
+            growth_rates.append(gr)
+    median_growth = sorted(growth_rates)[len(growth_rates)//2] if growth_rates else 0
+    alert_by_trend = median_growth > trend_threshold
+
+    # Alert level
+    reasons = []
+    if alert_by_rate:
+        reasons.append('rate_above_threshold')
+    if alert_by_trend:
+        reasons.append('trend_accelerating')
+
+    if alert_by_rate or (alert_by_trend and crime_rate > city_median):
+        alert_level = 'High'
+    elif alert_by_rate or alert_by_trend:
+        alert_level = 'Moderate'
+    else:
+        alert_level = 'Low'
+
+    is_alert = alert_level in ('High', 'Moderate')
+
+    # Action pack
+    action_pack = generate_action_pack(city_display, year, crime_rate,
+                                        std_val, pop_lakh, status, severity)
+
+    # Log alert
+    try:
+        log_alert(city=city_display, year=year, rate=crime_rate, std=std_val,
+                  alert_level=alert_level, reasons=reasons,
+                  action_pack=action_pack, model_used='v3')
+    except Exception:
+        pass  # don't break response if logging fails
+
+    return jsonify({
+        'city':               city_display,
+        'year':               year,
+        'rate':               crime_rate,
+        'std':                std_val,
+        'alert':              is_alert,
+        'alert_level':        alert_level,
+        'reasons':            reasons,
+        'action_pack':        action_pack,
+        'trend':              trend,
+        'model_used':         'v3',
+        'city_match_method':  match_method,
+        'trend_is_projection': True,
+    })
+
+
+@app.route('/api/simulate_intervention', methods=['POST'])
+def simulate_intervention():
+    """
+    POST /api/simulate_intervention
+    Intervention Simulator — what-if analysis with configurable levers.
+    Uses logistic saturation to model diminishing returns.
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body must be valid JSON'}), 400
+
+    city_raw = data.get('city', '')
+    year_raw = data.get('year', 2026)
+    interventions = data.get('interventions', {})
+
+    try:
+        year = int(year_raw)
+    except (TypeError, ValueError):
+        return jsonify({'error': f"'year' must be integer"}), 400
+
+    try:
+        city_display, city_canonical, city_code, match_method = _resolve_city(str(city_raw))
+    except ValueError as ve:
+        try:
+            return jsonify(json.loads(str(ve))), 422
+        except Exception:
+            return jsonify({'error': 'city_not_supported', 'message': str(ve)}), 422
+
+    # Get base prediction
+    pop_lakh = _pop_lakh_for_code(city_code, year)
+    try:
+        mean, std, confidence, _ = get_prediction_cached(city_canonical, year)
+    except Exception as e:
+        return jsonify({'error': f'Prediction failed: {e}'}), 500
+
+    base_rate = round(float(mean), 2)
+    cfg = _load_intervention_config()
+    k = cfg.get('saturation_k', 0.25)
+
+    # Extract intervention percentages (clamped to safe ranges)
+    cctv_pct   = max(0, min(100, float(interventions.get('cctv_percent_increase', 0))))
+    police_pct = max(0, min(50,  float(interventions.get('police_strength_percent', 0))))
+    patrol_pct = max(0, min(100, float(interventions.get('patrol_frequency_pct', 0))))
+
+    # Logistic saturation: effective_reduction = effect_per_10 * (1 - exp(-k * pct/10)) / 100
+    def logistic_reduction(pct, effect_per_10):
+        if pct <= 0:
+            return 0.0
+        raw = (effect_per_10 / 100) * (1 - math.exp(-k * pct / 10))
+        return min(raw, 0.30)  # cap at 30% max per lever
+
+    cctv_red   = logistic_reduction(cctv_pct,   cfg.get('cctv_effect_per_10pct', 1.5))
+    police_red = logistic_reduction(police_pct, cfg.get('police_effect_per_10pct', 3.0))
+    patrol_red = logistic_reduction(patrol_pct, cfg.get('patrol_effect_per_10pct', 0.8))
+
+    # Multiplicative combination
+    adjusted_rate = base_rate * (1 - cctv_red) * (1 - police_red) * (1 - patrol_red)
+    adjusted_rate = round(max(adjusted_rate, 0.1), 2)  # floor at 0.1
+    reduction_pct = round(((base_rate - adjusted_rate) / base_rate) * 100, 2) if base_rate > 0 else 0
+
+    # Cost estimates
+    costs_cfg = cfg.get('costs', {})
+    cctv_units = int(pop_lakh * 50 * (cctv_pct / 100))  # ~50 cameras per lakh baseline
+    cctv_cost = cctv_units * costs_cfg.get('cctv_per_unit', 50000)
+    extra_officers = int((pop_lakh * 100000 / cfg.get('pop_per_officer', 700)) * police_pct / 100)
+    police_cost = extra_officers * costs_cfg.get('officer_annual_cost', 300000)
+    patrol_cost = int(patrol_pct * costs_cfg.get('temporary_cctv_van', 750000) / 100) * max(1, int(pop_lakh / 10))
+    total_cost = cctv_cost + police_cost + patrol_cost
+
+    cost_estimate = {
+        'cctv_cost':                cctv_cost,
+        'cctv_units':               cctv_units,
+        'additional_personnel_cost': police_cost,
+        'additional_officers':       extra_officers,
+        'patrol_cost':              patrol_cost,
+        'total':                    total_cost,
+        'currency':                 'INR',
+    }
+
+    # Adjusted trend projection
+    base_total = base_rate * pop_lakh
+    base_trend = project_future_rates(city=city_canonical, base_year=year,
+                                       base_total_crimes=base_total, years=5)
+    reduction_factor = adjusted_rate / base_rate if base_rate > 0 else 1
+    adjusted_trend = []
+    for pt in base_trend:
+        adjusted_trend.append({
+            'year': pt['year'],
+            'base_pred': pt['pred'],
+            'adjusted_pred': round(pt['pred'] * reduction_factor, 2),
+            'trend_is_projection': True,
+        })
+
+    # Confidence based on intervention magnitude
+    total_intervention = cctv_pct + police_pct + patrol_pct
+    if total_intervention <= 20:
+        sim_confidence = 'High'
+    elif total_intervention <= 60:
+        sim_confidence = 'Moderate'
+    else:
+        sim_confidence = 'Low'
+
+    assumptions = {
+        'cctv_effect_per_10pct':   cfg.get('cctv_effect_per_10pct', 1.5),
+        'police_effect_per_10pct': cfg.get('police_effect_per_10pct', 3.0),
+        'patrol_effect_per_10pct': cfg.get('patrol_effect_per_10pct', 0.8),
+        'saturation_k':            k,
+        'max_per_lever':           '30%',
+        'combination':             'multiplicative',
+        'cctv_reduction_applied':  round(cctv_red * 100, 2),
+        'police_reduction_applied': round(police_red * 100, 2),
+        'patrol_reduction_applied': round(patrol_red * 100, 2),
+    }
+
+    # Log simulation
+    try:
+        log_simulation(
+            city=city_display, year=year, base_rate=base_rate,
+            adjusted_rate=adjusted_rate, reduction_pct=reduction_pct,
+            interventions=interventions, assumptions=assumptions,
+            cost_estimate=cost_estimate, confidence=sim_confidence,
+        )
+    except Exception:
+        pass
+
+    return jsonify({
+        'city':            city_display,
+        'year':            year,
+        'base_rate':       base_rate,
+        'adjusted_rate':   adjusted_rate,
+        'reduction_pct':   reduction_pct,
+        'assumptions':     assumptions,
+        'adjusted_trend':  adjusted_trend,
+        'cost_estimate':   cost_estimate,
+        'confidence':      sim_confidence,
+        'model_used':      'v3',
+        'disclaimer':      cfg.get('disclaimer', 'Estimates based on historical associations.'),
+    })
 
 
 if __name__ == '__main__':

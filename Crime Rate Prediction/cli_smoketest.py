@@ -65,7 +65,7 @@ def main():
             "message":       f"'{city_raw}' is not a V3-supported city. No prediction made.",
             "allowed_cities": sorted(load_v3_cities()),
         }))
-        sys.exit(1)
+        sys.exit(2)
 
     try:
         df_row, warnings = validate_and_prepare(input_dict, meta)

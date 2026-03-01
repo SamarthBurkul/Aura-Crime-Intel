@@ -21,6 +21,8 @@ import {
   CartesianGrid, ResponsiveContainer
 } from 'recharts';
 import axios from 'axios';
+import EarlyWarningAlert from '../components/EarlyWarningAlert';
+import InterventionSimulator from '../components/InterventionSimulator';
 
 const API = 'http://127.0.0.1:5000';
 
@@ -166,6 +168,7 @@ export default function Prediction() {
   const [serverError, setServerError] = useState('');
   const [result, setResult] = useState(null);
   const [severityAnim, setSeverityAnim] = useState(0);
+  const [showSimulator, setShowSimulator] = useState(false);
 
   // History
   const [historyRows, setHistoryRows] = useState([]);
@@ -220,6 +223,17 @@ export default function Prediction() {
         crime: selectedCrime,
         year: Number(selectedYear),
       });
+
+      // Fetch alert data independently
+      try {
+        const alertRes = await axios.get(`${API}/api/alert`, {
+          params: { city: selectedCity, year: selectedYear }
+        });
+        res.data.alertData = alertRes.data;
+      } catch (err) {
+        console.error('Alert fetch failed:', err);
+      }
+
       setResult(res.data);
       window.scrollTo(0, 0);
     } catch (err) {
@@ -476,6 +490,11 @@ export default function Prediction() {
                 </div>
 
                 {/* Main card */}
+                <EarlyWarningAlert
+                  alertData={result.alertData}
+                  onOpenSimulator={() => setShowSimulator(true)}
+                />
+
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-32 bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
 
@@ -638,14 +657,14 @@ export default function Prediction() {
                       <span className="px-4 py-2 rounded-xl text-sm font-bold border"
                         style={{
                           background: result.resource_allocation.severity === 'Critical' ? 'rgba(231,76,60,0.2)' :
-                                      result.resource_allocation.severity === 'High' ? 'rgba(230,126,34,0.2)' :
-                                      result.resource_allocation.severity === 'Moderate' ? 'rgba(243,156,18,0.2)' : 'rgba(46,204,113,0.2)',
+                            result.resource_allocation.severity === 'High' ? 'rgba(230,126,34,0.2)' :
+                              result.resource_allocation.severity === 'Moderate' ? 'rgba(243,156,18,0.2)' : 'rgba(46,204,113,0.2)',
                           borderColor: result.resource_allocation.severity === 'Critical' ? '#e74c3c' :
-                                       result.resource_allocation.severity === 'High' ? '#e67e22' :
-                                       result.resource_allocation.severity === 'Moderate' ? '#f39c12' : '#2ecc71',
+                            result.resource_allocation.severity === 'High' ? '#e67e22' :
+                              result.resource_allocation.severity === 'Moderate' ? '#f39c12' : '#2ecc71',
                           color: result.resource_allocation.severity === 'Critical' ? '#e74c3c' :
-                                 result.resource_allocation.severity === 'High' ? '#e67e22' :
-                                 result.resource_allocation.severity === 'Moderate' ? '#f39c12' : '#2ecc71',
+                            result.resource_allocation.severity === 'High' ? '#e67e22' :
+                              result.resource_allocation.severity === 'Moderate' ? '#f39c12' : '#2ecc71',
                         }}>
                         {result.resource_allocation.severity} Severity
                       </span>
@@ -757,6 +776,16 @@ export default function Prediction() {
                 </div>
               </div>
             )}
+
+            {showSimulator && result && (
+              <InterventionSimulator
+                city={result.city}
+                year={result.year}
+                baseRate={result.primary?.crimeRate || result.rate}
+                onClose={() => setShowSimulator(false)}
+              />
+            )}
+
           </div>
         )}
       </div>

@@ -313,3 +313,122 @@ class TestHeatmapV3:
         assert r.status_code in (404, 422, 400)
         data = r.get_json()
         assert data.get('error') in ('city_not_supported', 'no_region_data')
+
+
+# ── G6. Trend projection is non-flat ─────────────────────────────────────────
+@skip_no_model
+class TestTrendIsNonFlat:
+    """
+    Validates that the trend projection for a city with historical data
+    (e.g. Delhi) produces non-identical values across the 5-year window.
+    This tests the year-sensitive extrapolation fix.
+    """
+    @pytest.fixture(autouse=True)
+    def client(self):
+        from app import app
+        app.config['TESTING'] = True
+        with app.test_client() as c:
+            self.c = c
+            yield
+
+    def test_delhi_trend_is_not_flat(self):
+        r = self.c.post('/api/predict', json={'city': '5', 'year': 2026},
+                        content_type='application/json')
+        assert r.status_code == 200
+        data = r.get_json()
+        trend = data.get('trend', [])
+        assert len(trend) >= 2, "Expected at least 2 trend points"
+        rates = [pt['pred'] for pt in trend]
+        # Not all values should be identical (flat line = broken extrapolation)
+        assert len(set(round(v, 4) for v in rates)) > 1, (
+            f"Trend is flat — all values are {rates[0]}. "
+            "Year-sensitive extrapolation may not be working."
+        )
+
+    def test_trend_has_projection_flag(self):
+        """Every trend point must carry trend_is_projection=True."""
+        r = self.c.post('/api/predict', json={'city': '5', 'year': 2026},
+                        content_type='application/json')
+        data = r.get_json()
+        for i, pt in enumerate(data.get('trend', [])):
+            assert pt.get('trend_is_projection') is True, (
+                f"Trend point {i} missing trend_is_projection flag"
+            )
+
+
+# ── G7. model_used / std / city_match_method in predict response ──────────────
+@skip_no_model
+class TestModelContractInResponse:
+    """
+    Validates the V3 single-model contract: every predict response must include
+    model_used='v3', a numeric std, and the city_match_method audit field.
+    """
+    @pytest.fixture(autouse=True)
+    def client(self):
+        from app import app
+        app.config['TESTING'] = True
+        with app.test_client() as c:
+            self.c = c
+            yield
+
+    def _predict(self, city_code='13', year=2026):
+        return self.c.post('/api/predict',
+                           json={'city': city_code, 'year': year},
+                           content_type='application/json')
+
+    def test_model_used_is_v3(self):
+        data = self._predict().get_json()
+        assert data.get('model_used') == 'v3', (
+            f"Expected model_used='v3', got {data.get('model_used')!r}"
+        )
+
+    def test_std_is_numeric(self):
+        data = self._predict().get_json()
+        std = data.get('pred_std') or data.get('primary', {}).get('std')
+        assert std is not None, "std missing from response"
+        assert isinstance(std, (int, float))
+
+    def test_city_match_method_present(self):
+        data = self._predict().get_json()
+        method = data.get('city_match_method')
+        assert method is not None, "city_match_method missing from response"
+        assert method in ('code', 'alias', 'exact', 'substring', 'fuzzy'), (
+            f"Unexpected city_match_method: {method!r}"
+        )
+
+
+# ── G5. /api/supported_cities endpoint ───────────────────────────────────────
+@skip_no_model
+class TestSupportedCitiesEndpoint:
+    @pytest.fixture(autouse=True)
+    def client(self):
+        from app import app
+        app.config['TESTING'] = True
+        with app.test_client() as c:
+            self.c = c
+            yield
+
+    def test_returns_200(self):
+        assert self.c.get('/api/supported_cities').status_code == 200
+
+    def test_model_is_v3(self):
+        data = self.c.get('/api/supported_cities').get_json()
+        assert data['model'] == 'v3'
+
+    def test_total_matches_count(self):
+        data = self.c.get('/api/supported_cities').get_json()
+        assert data['total'] == len(data['cities'])
+
+    def test_each_entry_has_reliable_flag(self):
+        data = self.c.get('/api/supported_cities').get_json()
+        for entry in data['cities']:
+            assert 'city' in entry
+            assert 'reliable' in entry
+            assert isinstance(entry['reliable'], bool)
+
+    def test_no_non_v3_cities(self):
+        data = self.c.get('/api/supported_cities').get_json()
+        names = {e['city'] for e in data['cities']}
+        non_v3 = {'Hyderabad', 'Indore', 'Kanpur', 'Meerut', 'Rajkot', 'Vasai'}
+        assert len(non_v3 & names) == 0, f"Non-V3 cities leaked: {non_v3 & names}"
+

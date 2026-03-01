@@ -77,19 +77,29 @@ export default function Heatmap() {
 
             {/* Year Slider */}
             <div className="space-y-3">
-              <div className="flex justify-between">
-                <label className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
                   Target Year
                 </label>
-                <span className="text-indigo-400 font-bold">{year}</span>
+                <span className="text-2xl font-extrabold text-indigo-400 bg-indigo-500/10 border border-indigo-500/30 px-4 py-1 rounded-xl">
+                  {year}
+                </span>
               </div>
               <input
                 type="range" min="2026" max="2035" value={year}
                 onChange={e => { setYear(Number(e.target.value)); setSelectedCity(null); }}
-                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                className="w-full h-2.5 rounded-lg appearance-none cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, #6366f1 ${((year - 2026) / 9) * 100}%, #334155 ${((year - 2026) / 9) * 100}%)`,
+                  accentColor: '#6366f1',
+                }}
               />
-              <div className="flex justify-between text-xs text-slate-600 font-medium">
-                <span>2026</span><span>2035</span>
+              <div className="flex justify-between text-xs font-bold text-slate-400">
+                <span>2026</span>
+                <span className="text-slate-500">|</span>
+                <span className="text-slate-500">|</span>
+                <span className="text-slate-500">|</span>
+                <span>2035</span>
               </div>
             </div>
 
@@ -317,8 +327,8 @@ export default function Heatmap() {
                       key={city.name}
                       onClick={() => setSelectedCity(city.name === selectedCity ? null : city.name)}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all text-left border ${selectedCity === city.name
-                          ? 'bg-indigo-600/20 border-indigo-500/40'
-                          : 'border-transparent hover:bg-slate-800/60 hover:border-slate-700/50'
+                        ? 'bg-indigo-600/20 border-indigo-500/40'
+                        : 'border-transparent hover:bg-slate-800/60 hover:border-slate-700/50'
                         }`}
                     >
                       <div className="flex items-center gap-3">

@@ -14,7 +14,7 @@ import { ArrowLeft, RefreshCw, HelpCircle } from 'lucide-react'
 
 function ConfChip({ confidence }) {
     const map = { High: '#2ecc71', Moderate: '#f39c12', Low: '#e74c3c' }
-    if (!confidence) return <span style={{ color: 'var(--muted)' }}>—</span>
+    if (!confidence) return <span style={{ color: 'var(--muted)' }}>N/A</span>
     return (
         <span className="conf-chip" style={{ background: map[confidence] || '#888' }}>
             {confidence}
@@ -100,7 +100,7 @@ export default function HistoryPage() {
                                                 >
                                                     Unknown <HelpCircle size={11} style={{ display: 'inline', verticalAlign: 'middle' }} />
                                                 </span>
-                                            ) : (r.crimeType || '—')}
+                                            ) : (r.crimeType || 'N/A')}
                                         </td>
                                         <td style={{ fontSize: 11 }}>
                                             <span style={{
@@ -112,10 +112,10 @@ export default function HistoryPage() {
                                             </span>
                                         </td>
                                         <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{r.crimeRate}</td>
-                                        <td style={{ color: 'var(--muted)' }}>{r.std != null ? `±${r.std}` : '—'}</td>
+                                        <td style={{ color: 'var(--muted)' }}>{r.std != null ? `±${r.std}` : 'N/A'}</td>
                                         <td><ConfChip confidence={r.confidence} /></td>
                                         <td style={{ color: 'var(--muted)', fontSize: 12 }}>
-                                            {r.createdAt ? r.createdAt.split('.')[0] : '—'}
+                                            {r.createdAt ? r.createdAt.split('.')[0] : 'N/A'}
                                         </td>
                                     </tr>
                                 )

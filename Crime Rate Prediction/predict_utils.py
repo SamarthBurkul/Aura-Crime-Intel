@@ -217,9 +217,23 @@ def validate_and_prepare(
         if df is not None:
             city_rows = df[df["City"].str.lower() == canonical_city.lower()]
             if not city_rows.empty:
-                row = city_rows.sort_values("Year").iloc[-1]
-                if col in row.index:
-                    return float(row[col])
+                city_sorted = city_rows.sort_values("Year")
+                last_row = city_sorted.iloc[-1]
+                last_year = int(last_row["Year"])
+                if col in last_row.index:
+                    base_val = float(last_row[col])
+                    # If target year is beyond historical data, extrapolate
+                    # using the column's median YoY growth rate
+                    if year > last_year and len(city_sorted) >= 2 and col in city_sorted.columns:
+                        col_vals = city_sorted[col].dropna()
+                        if len(col_vals) >= 2:
+                            yoy = col_vals.pct_change().dropna().tail(3).values
+                            if len(yoy) > 0:
+                                g = float(np.median(yoy))
+                                g = max(-0.30, min(g, 0.30))  # clamp
+                                delta = year - last_year
+                                return max(base_val * ((1 + g) ** delta), 0)
+                    return base_val
         return 0.0
 
     row = {
