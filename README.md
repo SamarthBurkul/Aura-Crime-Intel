@@ -1,89 +1,113 @@
-# 🔍 CivicSentinel
+# 🔍 CivicSentinel — Aura Crime Intel
 
-> An AI-powered crime rate prediction platform for Indian metropolitan cities — built with a **dual Random Forest model** backend, a **React + Vite** frontend, and a **Flask REST API**.
+> An AI-powered crime analytics and prediction platform for **29 Indian cities** — featuring a **V3 Random Forest pipeline**, **Early Warning Alerts**, **Strategic Intervention Simulator**, and an interactive **crime heatmap** — built with **Flask**, **React + Vite**, and **Tailwind CSS**.
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-REST%20API-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com)
-[![React](https://img.shields.io/badge/React_18-Vite-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![React](https://img.shields.io/badge/React_19-Vite_7-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-RandomForest-F7931E?logo=scikitlearn&logoColor=white)](https://scikit-learn.org)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-4.2-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite&logoColor=white)](https://sqlite.org)
 
 ---
 
-## 🎯 What It Predicts
+## 🎯 What It Does
 
-Given a **city**, **crime category**, and **year**, the app predicts the **crime rate per lakh population** using two independent ML models:
+Given a **city** and **year**, the V3 combined model predicts the **total crime rate per lakh population** with uncertainty quantification:
 
-| | Primary Model | Alternate Model (Experimental) |
-|--|--|--|
-| **Dataset** | NCRB aggregated data (19 cities · 10 crime types · 2014–2021) | Aggregated from 40,160+ incident-level records (29 cities · 2020–2024) |
-| **Training Samples** | 1,520 | 580 |
-| **Algorithm** | Random Forest Regressor (100 trees) | Random Forest Regressor (100 trees) |
-| **R² Score** | **93.20%** | **93.50%** |
-| **Train/Test Gap** | 5.32% | 5.38% |
-| **Model File** | `model.pkl` | `model_v2.pkl` |
-
-> The alternate model also outputs **prediction uncertainty (mean ± std)** computed across all 100 decision trees, shown as a High / Moderate / Low confidence badge.
+| | V3 Combined Model |
+|--|--|
+| **Dataset** | Merged — NCRB aggregated (19 cities · 2014–2021) + incident-level (29 cities · 2020–2024) |
+| **Algorithm** | Random Forest Regressor (inside sklearn Pipeline) |
+| **R² Score** | **93.50%** |
+| **Train/Test Gap** | 5.38% |
+| **Uncertainty** | Per-tree std → High / Moderate / Low confidence badge |
+| **Cities** | 29 Indian metropolitan cities |
+| **Model File** | `model_combined_v3.pkl` + `model_combined_v3_meta.json` |
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────┐
-│   React + Vite   :5173      │  ← Frontend (3 pages)
-│   react-router-dom          │
-│   recharts · axios          │
-└────────────┬────────────────┘
-             │  /api/* proxy
-             ▼
-┌─────────────────────────────┐
-│   Flask REST API   :5000    │  ← ML backend (Python)
-│   flask-cors                │
-│   ├── /api/predict (POST)   │
-│   ├── /api/history (GET)    │
-│   ├── /api/stats   (GET)    │
-│   └── /api/meta   (GET)     │
-└────────────┬────────────────┘
-             │
-    ┌────────┴────────┐
-    │                 │
-model.pkl        model_v2.pkl      ← scikit-learn RandomForest
-    │                 │
-    └────────┬────────┘
-             │
-          crime.db                 ← SQLite (prediction history)
+┌──────────────────────────────────────────┐
+│   React 19 + Vite 7 + Tailwind CSS 4    │  ← Frontend (:5173)
+│   8 pages · Recharts · Leaflet map       │
+│   react-router-dom · axios               │
+└───────────────────┬──────────────────────┘
+                    │  /api/* proxy
+                    ▼
+┌──────────────────────────────────────────┐
+│   Flask REST API                  :5000  │  ← Backend (Python)
+│   flask-cors · SQLite                    │
+│                                          │
+│   /api/predict           POST            │  Crime rate prediction
+│   /api/history           GET             │  Prediction history log
+│   /api/stats             GET             │  Dashboard statistics
+│   /api/meta              GET             │  Model metadata
+│   /api/cities            GET             │  V3 city list
+│   /api/supported_cities  GET             │  Cities with reliability flag
+│   /api/heatmap           GET             │  Crime heatmap data
+│   /api/city-analysis     GET             │  Deep city analysis
+│   /api/alert             GET             │  Early Warning Alert System
+│   /api/simulate_intervention  POST       │  Strategic Intervention Simulator
+│                                          │
+│   model_combined_v3.pkl                  │  ← sklearn Pipeline
+│   model_combined_v3_meta.json            │  ← Encoders + city mappings
+│   crime_predictions.db                   │  ← SQLite (logs)
+└──────────────────────────────────────────┘
 ```
 
 ---
 
-## ✨ Features
+## ✨ Key Features
 
-- 🔮 **Dual-model prediction** — primary result + experimental alternate estimate side by side
-- 📊 **Uncertainty quantification** — std across 100 RF trees shown as ±value with confidence badge
-- 📈 **5-year crime trend chart** — Recharts line graph for future projections
-- 🗃️ **Prediction history** — persisted in SQLite, shown in full table with alt model columns
-- 🚨 **Policy recommendations** — context-aware suggestions based on predicted risk level
-- 📋 **Live dashboard stats** — total predictions, highest/safest city (from history)
-- ⚡ **Loading states** — spinner while prediction is running, no blank screens
+### 🔮 Crime Rate Prediction
+- V3 combined model with **uncertainty quantification** (mean ± std across RF trees)
+- Confidence badge (High / Moderate / Low) based on percentile thresholds
+- 5-year future trend projection with line charts
+- Crime breakdown and severity analysis
+
+### 🚨 Early Warning Alert System
+- Automatic threat-level assessment (Critical / High / Moderate / Low)
+- Trend acceleration detection (year-over-year growth analysis)
+- **Action Pack** — downloadable PDF with deployment numbers, budget estimates, and timeline for government decision-making
+
+### 🎛️ Strategic Intervention Simulator
+- What-if analysis with configurable levers: CCTV coverage, police strength, patrol frequency
+- **Logistic saturation model** for diminishing returns
+- Cost estimation (CCTV units, officer salaries, patrol vans)
+- Before/after comparison with projected crime reduction
+
+### 🗺️ Interactive Crime Heatmap
+- Leaflet-based map of India with city-level crime intensity markers
+- Year-based filtering with regional breakdowns
+- Color-coded severity visualization
+
+### 📊 Dashboard & Analytics
+- Live statistics: total predictions, highest/safest city
+- City-vs-city comparison charts
+- Deep city analysis with sub-region breakdown
+- Resource allocation recommendations (budget, manpower, infrastructure)
+
+### 📋 Prediction History
+- Full prediction log persisted in SQLite
+- Searchable table with confidence scores, timestamps, and trend data
 
 ---
 
 ## 📱 Pages
 
-### `/` — Predict
-- Hero section with project description
-- 4 live stat cards (total predictions, highest/safest city, active models)
-- Prediction form: City · Crime Category · Year
-
-### `/result` — Result
-- Primary prediction card (crime rate, cases, population, severity bar — animated)
-- Alternate estimate card (mean ± std, confidence badge, 5-year trend chart)
-- Policy recommendation panel (changes based on risk level)
-
-### `/history` — History
-- Full table: city, year, crime type, primary rate, alt mean, alt std, confidence, cases, timestamp
-- Refresh button, empty state, loading spinner
+| Route | Page | Description |
+|-------|------|-------------|
+| `/` | **Landing** | Hero section with animated entry, feature highlights, CTA |
+| `/home` | **Home** | Stat cards, quick prediction form |
+| `/dashboard` | **Dashboard** | Analytics overview, live stats, charts |
+| `/prediction` | **Prediction** | Full prediction form with results, trends, alerts, simulator |
+| `/city-analysis` | **City Analysis** | Deep-dive into a single city's crime profile |
+| `/comparison` | **Comparison** | Side-by-side city comparison with charts |
+| `/heatmap` | **Heatmap** | Interactive Leaflet map with crime intensity |
+| `/about` | **About** | Project info, model details, team |
 
 ---
 
@@ -93,7 +117,7 @@ model.pkl        model_v2.pkl      ← scikit-learn RandomForest
 
 ```bash
 cd "Crime Rate Prediction"
-pip install flask flask-cors numpy scikit-learn matplotlib
+pip install -r requirements.txt
 python app.py
 # → Running on http://localhost:5000
 ```
@@ -107,9 +131,7 @@ npm run dev
 # → Running on http://localhost:5173
 ```
 
-Open **[http://localhost:5173](http://localhost:5173)**
-
-> The Vite dev server proxies all `/api/*` calls to Flask on `:5000` automatically — no manual CORS setup needed from the browser.
+Open **[http://localhost:5173](http://localhost:5173)** — the Vite dev server proxies all `/api/*` calls to Flask on `:5000` automatically.
 
 ---
 
@@ -118,27 +140,51 @@ Open **[http://localhost:5173](http://localhost:5173)**
 ```
 Aura-Crime-Intel/
 │
-├── Crime Rate Prediction/          # Python Flask backend
-│   ├── app.py                      # REST API (predict · history · stats · meta)
+├── Crime Rate Prediction/              # Python Flask backend
+│   ├── app.py                          # REST API (14+ endpoints)
+│   ├── model_loader.py                 # V3 model loading + city validation
+│   ├── predict_utils.py                # Prediction helpers, trend projection
+│   ├── log_predict.py                  # SQLite logging (predictions, alerts, sims)
 │   ├── requirements.txt
+│   ├── config/
+│   │   └── intervention_effects.json   # Simulator tuning parameters
+│   ├── db/
+│   │   └── logging_schema.sql          # Database schema
 │   ├── Model/
-│   │   ├── model.pkl               # Primary RF model (NCRB data)
-│   │   ├── model_v2.pkl            # Alternate RF model (incident data)
-│   │   └── model_v2_meta.json      # Label encoder classes + population map
+│   │   ├── model_combined_v3.pkl       # V3 Random Forest pipeline
+│   │   ├── model_combined_v3_meta.json # Encoders, city mappings, uncertainty thresholds
+│   │   ├── model.pkl                   # Legacy primary model (archive)
+│   │   ├── model_v2.pkl                # Legacy alternate model (archive)
+│   │   └── df_merged.csv              # Merged training dataset
 │   ├── Dataset/
-│   │   └── new_dataset.xlsx        # Preprocessed NCRB training data
-│   └── crp.ipynb                   # Model training notebook (all 5 models compared)
+│   │   └── new_dataset.xlsx            # NCRB preprocessed data
+│   ├── Mappings/
+│   │   ├── City_Mapping.txt
+│   │   └── Type_Mapping.txt
+│   ├── tests/                          # Pytest test suite
+│   └── crp.ipynb                       # Model training notebook
 │
-├── frontend/                       # React + Vite frontend
-│   ├── vite.config.js              # Proxy config → Flask :5000
+├── frontend/                           # React 19 + Vite 7 frontend
+│   ├── vite.config.js                  # Proxy config → Flask :5000
+│   ├── package.json
 │   └── src/
 │       ├── main.jsx
-│       ├── App.jsx                 # Router + Navbar
-│       ├── index.css               # Dark design system (tokens · glass cards · animations)
+│       ├── App.jsx                     # Router (8 routes, lazy loaded)
+│       ├── index.css                   # Tailwind CSS 4 design system
+│       ├── components/
+│       │   ├── Navbar.jsx
+│       │   ├── EarlyWarningAlert.jsx   # Alert system + Action Pack PDF
+│       │   └── InterventionSimulator.jsx # What-if simulator UI
+│       ├── contexts/                   # React context providers
 │       └── pages/
-│           ├── HomePage.jsx        # Stat cards + prediction form
-│           ├── ResultPage.jsx      # Dual prediction + trend chart + policy panel
-│           └── HistoryPage.jsx     # Full history table
+│           ├── LandingPage.jsx
+│           ├── Home.jsx
+│           ├── Dashboard.jsx
+│           ├── Prediction.jsx
+│           ├── CityAnalysis.jsx
+│           ├── Comparison.jsx
+│           ├── Heatmap.jsx
+│           └── About.jsx
 │
 ├── .gitignore
 └── README.md
@@ -146,19 +192,21 @@ Aura-Crime-Intel/
 
 ---
 
-## 🧪 Model Selection — Why Random Forest?
+## 🧪 V3 Model — Training Details
 
-Five models were benchmarked in `crp.ipynb`:
+The V3 combined model merges two data sources into a unified pipeline:
 
-| Model | MAE | RMSE | R² Test | R² Train |
-|-------|-----|------|---------|---------|
-| SVM (SVR) | 10.32 | 19.28 | -17.89% | -14.46% |
-| KNN (k=2) | 6.85 | 12.27 | 52.30% | 81.54% |
-| Decision Tree | 2.89 | 5.91 | 88.94% | **100%** ← overfit |
-| **Random Forest** ✅ | **2.49** | **4.63** | **93.20%** | 98.52% |
-| MLP Neural Network | 12.42 | 17.54 | 2.48% | 2.41% |
-
-Random Forest had the best test accuracy with a healthy 5.3% train-test gap — chosen as the production model.
+| Property | Value |
+|----------|-------|
+| **Data Sources** | NCRB aggregated (152 rows) + Kaggle incident-level (40,160 records → aggregated to 580) |
+| **Final Dataset** | Merged, deduplicated, 29 cities |
+| **Features** | Year, City (one-hot), Population |
+| **Target** | Total crime rate per lakh population |
+| **Pipeline** | sklearn Pipeline (ColumnTransformer + RandomForestRegressor) |
+| **R² Test** | 93.50% |
+| **R² Train** | 98.88% |
+| **MAE** | 0.23 |
+| **Uncertainty** | Per-tree prediction std with percentile-based confidence labels |
 
 ---
 
@@ -166,17 +214,25 @@ Random Forest had the best test accuracy with a healthy 5.3% train-test gap — 
 
 | Layer | Technology |
 |-------|-----------|
-| ML / Data | Python · scikit-learn · NumPy · pandas · Matplotlib |
+| ML / Data | Python · scikit-learn · NumPy · pandas · joblib |
 | API | Flask · flask-cors · SQLite |
-| Frontend | React 18 · Vite · React Router DOM |
+| Frontend | React 19 · Vite 7 · React Router DOM 7 |
+| Styling | Tailwind CSS 4 |
 | Charts | Recharts |
+| Maps | Leaflet · React-Leaflet |
 | UI Icons | Lucide React |
 | HTTP | Axios |
 | Data Source | NCRB India + Kaggle incident-level dataset (40k records) |
 
 ---
 
+## 🏙️ Supported Cities (29)
+
+Agra · Ahmedabad · Bengaluru · Bhopal · Chennai · Delhi · Faridabad · Ghaziabad · Hyderabad · Indore · Jaipur · Kalyan · Kanpur · Kolkata · Lucknow · Ludhiana · Meerut · Mumbai · Nagpur · Nashik · Patna · Pune · Rajkot · Srinagar · Surat · Thane · Varanasi · Vasai · Visakhapatnam
+
+---
+
 ## 👤 Author
 
 **Samarth Burkul**  
-Built for Hackathon 2026 · February 2026
+Built for Hackathon 2026 · February–March 2026
