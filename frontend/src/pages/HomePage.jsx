@@ -67,11 +67,7 @@ export default function HomePage({ setResult }) {
         <div className="page fade-up">
             {/* ── HERO ── */}
             <div className="page-hero">
-                <div className="hero-badge">🤖 V3 Combined Model · R² 92.15% · 400 Trees</div>
                 <h1 className="page-hero-title">Crime Rate Prediction<br />for Indian Cities</h1>
-                <p className="page-hero-sub">
-                    Powered by V3 Combined Random Forest — trained on NCRB data + 40,000+ incident-level records using GroupKFold cross-validation
-                </p>
             </div>
 
             {/* ── STAT CARDS ── */}

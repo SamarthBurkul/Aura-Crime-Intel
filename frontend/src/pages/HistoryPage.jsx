@@ -49,7 +49,7 @@ export default function HistoryPage() {
 
             <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>Prediction History</h2>
             <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24 }}>
-                Last 50 predictions — V3 Combined Model (400 trees · R² 92.15%)
+                Last 50 predictions
             </p>
 
             {loading ? (

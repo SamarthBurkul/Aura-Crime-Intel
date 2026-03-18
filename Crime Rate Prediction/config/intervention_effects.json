@@ -13,9 +13,11 @@
     },
     "pop_per_officer": 5000,
     "severity_multipliers": {
+        "Very High": 0.35,
         "High": 0.30,
         "Moderate": 0.15,
-        "Low": 0.05
+        "Low": 0.05,
+        "Very Low": 0.02
     },
     "disclaimer": "Estimates based on historical associations. Not causal guarantees."
 }

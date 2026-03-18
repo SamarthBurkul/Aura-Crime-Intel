@@ -1175,7 +1175,7 @@ def alert_endpoint():
     # Alert logic
     cfg = _load_intervention_config()
     threshold_abs = cfg.get('alert_rate_threshold_abs', 6.0)
-    threshold_mult = cfg.get('alert_rate_threshold_mult', 1.25)
+    threshold_mult = cfg.get('alert_rate_threshold_multiplier', 1.25)
     trend_threshold = cfg.get('trend_accel_threshold_pct', 3.0)
 
     # Compute city median from historical data (use trend as proxy)
@@ -1306,7 +1306,7 @@ def simulate_intervention():
     cctv_cost = cctv_units * costs_cfg.get('cctv_per_unit', 50000)
     extra_officers = int((pop_lakh * 100000 / cfg.get('pop_per_officer', 700)) * police_pct / 100)
     police_cost = extra_officers * costs_cfg.get('officer_annual_cost', 300000)
-    patrol_cost = int(patrol_pct * costs_cfg.get('temporary_cctv_van', 750000) / 100) * max(1, int(pop_lakh / 10))
+    patrol_cost = int(patrol_pct * costs_cfg.get('temp_cctv_van', 750000) / 100) * max(1, int(pop_lakh / 10))
     total_cost = cctv_cost + police_cost + patrol_cost
 
     cost_estimate = {

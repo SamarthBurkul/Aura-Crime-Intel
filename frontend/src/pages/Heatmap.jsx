@@ -78,9 +78,7 @@ export default function Heatmap() {
             <Map className="text-indigo-400" size={36} />
             Crime Risk Heatmap
           </h1>
-          <p className="text-slate-400 text-lg">
-            AI-predicted metropolitan crime intensity · OpenStreetMap · V3 Model (R² 92.15%)
-          </p>
+       
         </div>
 
         {/* ── Controls ── */}
@@ -245,7 +243,9 @@ export default function Heatmap() {
                   <div>
                     <h3 className="text-xl font-bold text-white leading-tight">{activeCity.name}</h3>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      {activeCity.reliable ? '✅ Reliable City' : 'Extrapolated'} · V3 Model
+                      {activeCity.reliable ? '✅ Reliable City' : 'Extrapolated'} 
+
+
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getSeverityClasses(activeCity.severity).bg} ${getSeverityClasses(activeCity.severity).txt} ${getSeverityClasses(activeCity.severity).bdr}`}>
@@ -363,11 +363,8 @@ export default function Heatmap() {
               </div>
             </div>
 
-            {/* Model info badge */}
-            <div className="flex items-start gap-3 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs text-slate-300">
-              <Shield className="text-indigo-400 shrink-0 mt-0.5" size={16} />
-              <span><strong className="text-indigo-400">V3 Combined</strong> — 400 trees, GroupKFold CV, R² 92.15%. Region rates = city rate × population ratio.</span>
-            </div>
+            
+           
           </div>
         </div>
 

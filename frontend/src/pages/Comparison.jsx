@@ -394,7 +394,7 @@ export default function Comparison() {
                 </ResponsiveContainer>
               </div>
               <p className="text-xs text-slate-600 mt-4 italic text-center">
-                Projections based on median historical growth rate · V3 Combined (R² 92.15%)
+                Projections based on median historical growth rate
               </p>
             </div>
           </>

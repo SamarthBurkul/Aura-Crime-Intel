@@ -5,12 +5,13 @@
  * FALLBACK_CITIES updated to match V3 city_mappings exactly.
  */
 import React, { useMemo, useState, useEffect, useCallback } from 'react'
-import { Search, Loader2 } from 'lucide-react'
+import { Search, Loader2, Sliders } from 'lucide-react'
 import {
   LineChart, Line, PieChart, Pie, Cell,
   ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip
 } from 'recharts'
 import axios from 'axios'
+import InterventionSimulator from '../components/InterventionSimulator'
 
 const API = 'http://127.0.0.1:5000'
 
@@ -67,6 +68,7 @@ const CityAnalysis = React.memo(() => {
   const [analysisData, setAnalysisData] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [showSimulator, setShowSimulator] = useState(false)
 
   /* 1. Load V3 city list from server */
   useEffect(() => {
@@ -232,6 +234,17 @@ const CityAnalysis = React.memo(() => {
                 </div>
               </div>
 
+              {/* Intervention Simulator launch button */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowSimulator(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-indigo-500/20 text-sm"
+                >
+                  <Sliders size={16} />
+                  Run Intervention Simulator
+                </button>
+              </div>
+
               {/* Charts */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="rounded-2xl bg-slate-900 border border-slate-800 p-8 h-full shadow-xl">
@@ -289,6 +302,17 @@ const CityAnalysis = React.memo(() => {
           )}
         </div>
       </div>
+
+      {/* Intervention Simulator modal */}
+      {showSimulator && analysisData && (
+        <InterventionSimulator
+          key="city-analysis-simulator"
+          city={selectedCityName}
+          year={2026}
+          baseRate={analysisData.currentRate}
+          onClose={() => setShowSimulator(false)}
+        />
+      )}
     </div>
   )
 })
