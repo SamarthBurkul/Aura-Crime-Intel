@@ -22,7 +22,6 @@ import {
 } from 'recharts';
 import axios from 'axios';
 import EarlyWarningAlert from '../components/EarlyWarningAlert';
-import InterventionSimulator from '../components/InterventionSimulator';
 
 const API = 'http://127.0.0.1:5000';
 
@@ -109,7 +108,7 @@ function BreakdownPanel({ breakdown }) {
           color: '#aac', fontSize: 13, fontWeight: 700
         }}
       >
-        <span> Informational: crime composition <span style={{
+        <span>📊 Informational: crime composition <span style={{
           fontSize: 10, background: '#334', color: '#aac',
           padding: '2px 6px', borderRadius: 4, marginLeft: 6
         }}>HISTORICAL</span></span>
@@ -148,9 +147,6 @@ function BreakdownPanel({ breakdown }) {
           <p style={{ fontSize: 11, color: '#556', marginTop: 8, fontStyle: 'italic' }}>
             Shares from most-recent historical data. Informational only — V3 predicts total crime rate.
           </p>
-
-
-
         </div>
       )}
     </div>
@@ -171,7 +167,6 @@ export default function Prediction() {
   const [serverError, setServerError] = useState('');
   const [result, setResult] = useState(null);
   const [severityAnim, setSeverityAnim] = useState(0);
-  const [showSimulator, setShowSimulator] = useState(false);
 
   // History
   const [historyRows, setHistoryRows] = useState([]);
@@ -485,7 +480,6 @@ export default function Prediction() {
                 {/* Main card */}
                 <EarlyWarningAlert
                   alertData={result}
-                  onOpenSimulator={() => setShowSimulator(true)}
                 />
 
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
@@ -572,6 +566,9 @@ export default function Prediction() {
                     <TrendingUp className="text-indigo-400" size={20} />
                     Predicted Crime Trend — Next 5 Years
                   </div>
+                  <p className="text-xs text-slate-500 mb-6 italic">
+                    Dashed line = projected via median historical growth rate (not model output)
+                  </p>
                   <div className="w-full" style={{ height: '280px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart
@@ -628,7 +625,7 @@ export default function Prediction() {
                           🟡 Strategic Resource Allocation Engine
                         </div>
                         <div className="text-sm text-slate-400">
-                          Dynamic planning for {result.city}'s {result.population}  citizens · Budget · Officers · Infrastructure
+                          Dynamic planning for {result.city}'s {result.population}L citizens · Budget · Officers · Infrastructure
                         </div>
                       </div>
                       <span className="px-4 py-2 rounded-xl text-sm font-bold border"
@@ -648,7 +645,7 @@ export default function Prediction() {
                     </div>
 
                     <div className="bg-indigo-900/30 border border-indigo-500/30 rounded-xl p-3 mb-6 text-sm text-indigo-200">
-                      <strong>AI dynamically calculated</strong> the following figures based on {result.city}'s predicted {result.primary.crimeRate} crime rate and {result.population}population size.
+                      <strong>AI dynamically calculated</strong> the following figures based on {result.city}'s predicted {result.primary.crimeRate} crime rate and {result.population}L population size.
                     </div>
 
                     {/* 4 Key Metric Cards */}
@@ -756,16 +753,6 @@ export default function Prediction() {
                   </button>
                 </div>
               </div>
-            )}
-
-            {showSimulator && result && (
-              <InterventionSimulator
-                key="simulator-modal"
-                city={result.city}
-                year={result.year}
-                baseRate={result.primary?.crimeRate ?? result.prediction}
-                onClose={() => setShowSimulator(false)}
-              />
             )}
 
           </div>

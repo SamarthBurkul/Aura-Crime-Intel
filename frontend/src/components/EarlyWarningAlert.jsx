@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { AlertTriangle, ShieldAlert, Download, X, Printer } from 'lucide-react';
+import { useInterventionModal } from '../contexts/InterventionModalContext';
 
-export default function EarlyWarningAlert({ alertData, onOpenSimulator }) {
+export default function EarlyWarningAlert({ alertData }) {
     const [showActionPack, setShowActionPack] = useState(false);
+    const { openIntervention } = useInterventionModal();
 
     if (!alertData || !alertData.alert) return null;
 
-    const { alert_level, reasons: _reasons, action_pack } = alertData;
+    const { alert_level, reasons, action_pack, threshold_used } = alertData;
 
     const getAlertStyles = () => {
         if (alert_level === 'High') {
@@ -29,6 +31,9 @@ export default function EarlyWarningAlert({ alertData, onOpenSimulator }) {
 
     const styles = getAlertStyles();
 
+    // Find the dev threshold if available (Admin check simulation)
+    const thresholdNote = threshold_used ? `(Admin Note: local threshold active at ${threshold_used} / 100k)` : '';
+
     return (
         <>
             {/* ── ALERTS CARD ── */}
@@ -42,7 +47,13 @@ export default function EarlyWarningAlert({ alertData, onOpenSimulator }) {
                             <h3 className="text-2xl font-bold text-white tracking-tight mb-2">
                                 {action_pack.headline}
                             </h3>
-
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {reasons.map((r, i) => (
+                                    <span key={i} className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider border ${styles.text} ${styles.border} bg-black/20`}>
+                                        {r.replace(/_/g, ' ')}
+                                    </span>
+                                ))}
+                            </div>
                             <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
                                 Based on historical associations, the projected crime rate of <strong>{alertData.rate} / 100k</strong> requires immediate strategic intervention. We recommend deploying <strong>{action_pack.officers_to_deploy}</strong> additional officers with an estimated budget of <strong>₹{(action_pack.budget_estimate.min / 100000).toFixed(1)}L - ₹{(action_pack.budget_estimate.max / 100000).toFixed(1)}L</strong>.
                             </p>
@@ -56,8 +67,15 @@ export default function EarlyWarningAlert({ alertData, onOpenSimulator }) {
                         >
                             <Download size={18} /> View Action Pack
                         </button>
+                        {/* Uses context — no local modal mount */}
                         <button
-                            onClick={onOpenSimulator}
+                            onClick={() => {
+                                openIntervention({
+                                    city: alertData.city,
+                                    year: alertData.year,
+                                    baseRate: alertData.rate,
+                                });
+                            }}
                             className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
                         >
                             Configure Interventions
@@ -65,13 +83,18 @@ export default function EarlyWarningAlert({ alertData, onOpenSimulator }) {
                     </div>
                 </div>
 
+                {thresholdNote && (
+                    <div className="absolute top-2 right-4 text-[10px] text-slate-500 font-mono italic">
+                        {thresholdNote}
+                    </div>
+                )}
             </div>
 
             {/* ── ACTION PACK MODAL ── */}
             {showActionPack && (
-                <div className="fixed inset-0 z-[70] overflow-y-auto bg-black/80 backdrop-blur-sm">
-                    <div className="flex min-h-full items-center justify-center p-4">
-                        <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div id="action-pack-overlay" className="fixed inset-0 z-[70] overflow-y-auto bg-black/80 backdrop-blur-sm">
+                    <div id="action-pack-flex" className="flex min-h-full items-center justify-center p-4">
+                        <div id="action-pack-container" className="bg-white rounded-xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
                             <div className="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center text-white shrink-0 print:hidden">
                                 <div className="font-bold flex items-center gap-2">
@@ -179,13 +202,41 @@ export default function EarlyWarningAlert({ alertData, onOpenSimulator }) {
                 </div>
             )}
 
-            {/* ── STYLES FOR PRINTING ── */}
             <style dangerouslySetInnerHTML={{
                 __html: `
         @media print {
+          /* Hide everything first */
           body * { visibility: hidden; }
+          
+          /* Show print container and its children */
           #action-pack-print, #action-pack-print * { visibility: visible; }
-          #action-pack-print { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible !important; }
+          
+          /* Make the print container fill the page */
+          #action-pack-print { 
+            position: absolute !important; 
+            left: 0 !important; 
+            top: 0 !important; 
+            width: 100% !important; 
+            height: auto !important;
+            overflow: visible !important; 
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          
+          /* Prevent any parent elements from clipping or restricting height */
+          html, body, #root, #action-pack-overlay, #action-pack-flex, #action-pack-container {
+             height: auto !important;
+             max-height: none !important;
+             min-height: 0 !important;
+             overflow: visible !important;
+             position: static !important;
+             transform: none !important;
+             display: block !important;
+             padding: 0 !important;
+             margin: 0 !important;
+             border: none !important;
+             box-shadow: none !important;
+          }
         }
       `}} />
         </>
